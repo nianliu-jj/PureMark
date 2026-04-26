@@ -1,0 +1,169 @@
+@import url("./styles/codemirror.less");
+@import url("./styles/vditor.less");
+
+* {
+  box-sizing: border-box;
+  outline: none;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--background-color-1);
+  user-select: none; // 默认禁止选中文本
+  -webkit-user-select: none; // Safari 兼容
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-color);
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--background-color-2);
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  position: relative;
+  top: 1.5px;
+}
+
+// 输入框和文本区域允许选中文本
+input[type="text"],
+input[type="search"],
+input[type="number"],
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.editor-container {
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--background-color-2) !important;
+}
+
+.link {
+  &:hover {
+    color: var(--primary-color);
+    cursor: pointer;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: 0.2s linear;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  height: 0 !important;
+  width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+@keyframes fade-in {
+  from {
+    height: 0;
+  }
+
+  to {
+    height: 100%;
+  }
+}
+
+#fontRoot {
+  height: 100%;
+  background: var(--background-color-1);
+
+  --puremark-font-size-h1: 24px;
+  --puremark-font-size-h2: 20px;
+  --puremark-font-size-h3: 18px;
+  --puremark-font-size-h4: 16px;
+  --puremark-font-size-h5: 14px;
+  --puremark-font-size-h6: 12px;
+  --puremark-font-size-default: 16px;
+  --puremark-font-size-code: 16px;
+  --puremark-editor-padding: 120px;
+
+  .editor {
+    height: 100%;
+  }
+
+  .ProseMirror {
+    padding-top: 60px;
+    padding-bottom: 200px;
+  }
+
+  p {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-default) !important;
+  }
+
+  h1 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h1) !important;
+  }
+
+  h2 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h2) !important;
+  }
+
+  h3 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h3) !important;
+  }
+
+  h4 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h4) !important;
+  }
+
+  h5 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h5) !important;
+  }
+
+  h6 {
+    font-family: var(--puremark-font-default) !important;
+    font-size: var(--puremark-font-size-h6) !important;
+  }
+
+  .puremark-code-block .cm-editor span {
+    font-family: var(--puremark-font-code);
+    font-size: var(--puremark-font-size-code) !important;
+  }
+
+  .puremark-code-block-editor .cm-editor,
+  .puremark-code-block-editor .cm-scroller,
+  .puremark-code-block-editor .cm-content,
+  .puremark-code-block-editor .cm-content .cm-line,
+  .puremark-code-block-editor .cm-content span {
+    font-family: var(--puremark-font-code) !important;
+    font-size: var(--puremark-font-size-code) !important;
+  }
+}

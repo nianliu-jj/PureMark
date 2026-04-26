@@ -1,0 +1,23 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "theme-editor",
+  "description": "Permissions for the theme-editor window (stage 4)",
+  "windows": ["theme-editor"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:event:default",
+    "core:webview:default",
+    "core:app:default",
+    "core:path:default",
+    "os:allow-platform",
+    "opener:default",
+    "opener:allow-open-url"
+  ]
+}
