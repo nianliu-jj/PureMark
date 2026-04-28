@@ -35,17 +35,16 @@ fn read_clipboard_files() -> AppResult<Vec<String>> {
 
 #[cfg(target_os = "macos")]
 fn read_clipboard_files() -> AppResult<Vec<String>> {
-    use cocoa::appkit::{NSPasteboard, NSPasteboardTypeFileURL};
+    use cocoa::appkit::NSPasteboard;
     use cocoa::base::{id, nil};
     use cocoa::foundation::{NSArray, NSString, NSURL};
-    use objc::runtime::Object;
+    use objc::class;
 
     unsafe {
         let pb: id = NSPasteboard::generalPasteboard(nil);
-        let items: id = pb.readObjectsForClasses_options_(
-            NSArray::arrayWithObject(nil, objc::class!(NSURL) as *const Object as id),
-            nil,
-        );
+        let nsurl_class: id = class!(NSURL) as *const objc::runtime::Class as id;
+        let class_array: id = NSArray::arrayWithObject(nil, nsurl_class);
+        let items: id = pb.readObjectsForClasses_options(class_array, nil);
 
         if items == nil {
             return Ok(Vec::new());
@@ -66,7 +65,6 @@ fn read_clipboard_files() -> AppResult<Vec<String>> {
                 }
             }
         }
-        let _ = NSPasteboardTypeFileURL; // 保留符号引用以便将来扩展过滤
         Ok(out)
     }
 }
