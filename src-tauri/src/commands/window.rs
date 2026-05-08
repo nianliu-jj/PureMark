@@ -55,12 +55,17 @@ pub async fn create_editor_window(
         .title("PureMark")
         .inner_size(width, height)
         .min_inner_size(800.0, 600.0)
-        .decorations(false)
         .resizable(true)
-        // Tauri #11430 workaround：先不带 position 构造为 visible(false)，
-        // build 后同步 set_position → show（不用 tauri://created once，因为 build()
-        // 返回时事件可能已触发、once 注册太晚永远不触发 → 窗口永远 visible:false）
         .visible(false);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .decorations(true)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true);
+
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.decorations(false).shadow(true);
 
     let window = builder
         .build()

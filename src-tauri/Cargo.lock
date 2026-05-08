@@ -3474,7 +3474,7 @@ dependencies = [
 
 [[package]]
 name = "puremark"
-version = "1.0.13"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",

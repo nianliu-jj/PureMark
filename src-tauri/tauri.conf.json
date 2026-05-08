@@ -20,7 +20,6 @@
         "minWidth": 800,
         "minHeight": 600,
         "decorations": false,
-        "transparent": false,
         "resizable": true,
         "fullscreen": false,
         "center": true
