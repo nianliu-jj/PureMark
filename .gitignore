@@ -48,6 +48,8 @@ pnpm-lock.yaml
 
 docs
 .claude
+.codex/
+openspec/
 
 test-math.md
 test-math-indent.md

@@ -22,6 +22,9 @@ const RECENT_OPEN_ITEMS_KEY = "puremark-recent-open-items";
 const LAST_SESSION_KEY = "puremark-last-session";
 const RECENT_OPEN_ITEMS_LIMIT = 20;
 
+let isLastSessionSnapshotPersistenceEnabled = false;
+let pendingLastSessionSnapshot: Omit<SessionSnapshot, "updatedAt"> | null = null;
+
 function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
@@ -180,11 +183,31 @@ export function getLastSessionSnapshot(): SessionSnapshot | null {
 }
 
 export function saveLastSessionSnapshot(snapshot: Omit<SessionSnapshot, "updatedAt">) {
+  if (!isLastSessionSnapshotPersistenceEnabled) {
+    pendingLastSessionSnapshot = snapshot;
+    return;
+  }
+
   writeJson<SessionSnapshot>(LAST_SESSION_KEY, {
     ...snapshot,
     updatedAt: Date.now(),
   });
   emitStorageChangeEvent(LAST_SESSION_KEY);
+}
+
+export function enableLastSessionSnapshotPersistence() {
+  if (isLastSessionSnapshotPersistenceEnabled) return;
+  isLastSessionSnapshotPersistenceEnabled = true;
+
+  if (!pendingLastSessionSnapshot) return;
+  const snapshot = pendingLastSessionSnapshot;
+  pendingLastSessionSnapshot = null;
+
+  if (snapshot.openFilePaths.length === 0) {
+    return;
+  }
+
+  saveLastSessionSnapshot(snapshot);
 }
 
 export function onLaunchStateChange(handler: (key: string) => void): () => void {

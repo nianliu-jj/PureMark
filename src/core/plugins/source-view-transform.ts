@@ -15,14 +15,6 @@ import { MarkdownSerializer } from "../serializer";
 /** 插件 Key */
 export const sourceViewTransformPluginKey = new PluginKey("puremark-source-view-transform");
 
-/** 代码块标记属性 */
-interface CodeBlockMarker {
-  codeBlockId: string;
-  lineIndex: number;
-  totalLines: number;
-  language: string;
-}
-
 /**
  * 生成唯一的代码块 ID
  */
@@ -110,10 +102,6 @@ function transformParagraphsToCodeBlock(
   schema: Schema
 ): { codeBlock: ProseMirrorNode; language: string } | null {
   if (paragraphs.length === 0) return null;
-
-  // 获取代码块信息
-  const firstPara = paragraphs[0].node;
-  const language = firstPara.attrs.language || "";
 
   // 提取所有行的文本
   const lines = paragraphs.map((p) => p.node.textContent);
@@ -345,7 +333,7 @@ function transformTableToParagraphs(table: ProseMirrorNode, schema: Schema): Pro
  */
 function transformParagraphsToTable(
   paragraphs: Array<{ node: ProseMirrorNode; pos: number }>,
-  schema: Schema
+  _schema: Schema
 ): ProseMirrorNode | null {
   if (paragraphs.length < 2) return null;
 
@@ -556,7 +544,7 @@ function transformListToParagraphs(list: ProseMirrorNode, schema: Schema): Prose
  */
 function transformParagraphsToList(
   paragraphs: Array<{ node: ProseMirrorNode; pos: number }>,
-  schema: Schema
+  _schema: Schema
 ): ProseMirrorNode[] | null {
   if (paragraphs.length === 0) return null;
 

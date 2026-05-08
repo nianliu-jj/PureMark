@@ -2,9 +2,8 @@
  * PureMark 核心类型定义
  */
 
-import type { EditorState, Transaction } from "prosemirror-state";
+import type { Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import type { Node, Schema } from "prosemirror-model";
 import type { PastePluginConfig } from "../plugins/paste";
 import type { AICompletionConfig } from "../plugins/ai-completion";
 

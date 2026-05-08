@@ -16,7 +16,7 @@ export function createMathBlockSyncPlugin(): Plugin {
   return new Plugin({
     key: mathBlockSyncPluginKey,
 
-    view(editorView) {
+    view() {
       return {
         update(view, prevState) {
           // 当选区变化时，更新所有数学块的编辑状态

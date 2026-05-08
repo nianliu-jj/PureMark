@@ -555,11 +555,11 @@ export function computeDecorations(
 /**
  * 兼容旧接口
  */
-export function findSyntaxRegions(doc: Node): SyntaxRegion[] {
+export function findSyntaxRegions(_doc: Node): SyntaxRegion[] {
   return [];
 }
 
-export function findMarkRegions(doc: Node): MarkRegion[] {
+export function findMarkRegions(_doc: Node): MarkRegion[] {
   return [];
 }
 

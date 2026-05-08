@@ -5,8 +5,8 @@
  * 支持嵌套语法检测，如 ==**text**== 或 ***text***
  */
 
-import { Plugin, PluginKey, Transaction } from "prosemirror-state";
-import { Node, Mark, Schema } from "prosemirror-model";
+import { Plugin, PluginKey } from "prosemirror-state";
+import { Node } from "prosemirror-model";
 import { decorationPluginKey } from "../decorations";
 
 /** 插件 Key */
@@ -104,11 +104,11 @@ const INLINE_SYNTAXES: InlineSyntax[] = [
   // 粗体 **text** 或 __text__
   {
     type: "strong",
-    pattern: /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)|(?<!_)(__)(?!_)(.+?)(?<!_)\1(?!_)/g,
+    pattern: /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)|(?<!_)(__)(?!_)(.+?)(?<!_)\3(?!_)/g,
     prefix: (m) => m[1] || m[3],
     suffix: (m) => m[1] || m[3],
     contentIndex: 2,
-    getAttrs: (m) => ({}),
+    getAttrs: () => ({}),
   },
   // 斜体 *text* 或 _text_
   // 注意：下划线在单词中间时不应该被视为斜体标记

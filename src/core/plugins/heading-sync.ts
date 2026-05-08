@@ -5,7 +5,7 @@
  * 当用户删除或添加 # 时，自动调整标题级别
  */
 
-import { Plugin, PluginKey, Transaction } from "prosemirror-state";
+import { Plugin, PluginKey } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 
 /** 插件 Key */

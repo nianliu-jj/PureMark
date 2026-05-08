@@ -16,7 +16,7 @@
 
 import { Node, Schema, Mark } from "prosemirror-model";
 import { puremarkSchema } from "../schema";
-import type { SyntaxMarker, SyntaxType } from "../types";
+import type { SyntaxMarker } from "../types";
 
 /** 解析结果 */
 export interface ParseResult {
@@ -47,7 +47,7 @@ const INLINE_SYNTAXES: InlineSyntax[] = [
   // 粗体 **text** 或 __text__ - 排除 *** 的情况
   {
     type: "strong",
-    pattern: /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)|(?<!_)(__)(?!_)(.+?)(?<!_)\1(?!_)/g,
+    pattern: /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)|(?<!_)(__)(?!_)(.+?)(?<!_)\3(?!_)/g,
     prefix: (m) => m[1] || m[3],
     suffix: (m) => m[1] || m[3],
     contentIndex: 2,

@@ -29,7 +29,7 @@ function parseJsonObject(raw: string, label: string): Record<string, unknown> {
       throw new Error(`${label}必须是 JSON 对象`);
     }
     return parsed as Record<string, unknown>;
-  } catch (error) {
+  } catch {
     throw new Error(`${label}格式不正确，请输入合法 JSON 对象`);
   }
 }

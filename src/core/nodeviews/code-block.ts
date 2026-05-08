@@ -690,13 +690,13 @@ export class CodeBlockView implements NodeView {
     }
 
     // 源码模式初始化
-    this.initSourceViewMode(normalizedLang);
+    this.initSourceViewMode();
   }
 
   /**
    * 初始化源码模式
    */
-  private initSourceViewMode(language: string): void {
+  private initSourceViewMode(): void {
     // 订阅源码模式状态变化
     this.sourceViewUnsubscribe = sourceViewManager.subscribe((sourceView) => {
       this.setSourceViewMode(sourceView);
@@ -965,7 +965,7 @@ export class CodeBlockView implements NodeView {
               selection.removeAllRanges();
               selection.addRange(range);
             }
-          } catch (e) {
+          } catch {
             // 忽略光标恢复错误
           }
         }
@@ -1467,7 +1467,7 @@ export class CodeBlockView implements NodeView {
         preview.innerHTML = svg;
         // 根据实际背景色修正文本颜色
         fixMermaidTextContrast(preview);
-      } catch (error) {
+      } catch {
         // mermaid.render() 语法错误时会在 removeTempElements() 之前抛出异常，
         // 导致临时 DOM 元素（<div id="d..."> / <svg> / <iframe>）遗留在 document.body 中。
         // 这些孤儿元素不断累积会干扰页面布局，导致 tab 栏等 UI 元素显示异常。
@@ -1742,7 +1742,7 @@ export class CodeBlockView implements NodeView {
                 selection.removeAllRanges();
                 selection.addRange(range);
               }
-            } catch (e) {
+            } catch {
               // 忽略光标恢复错误
             }
           });

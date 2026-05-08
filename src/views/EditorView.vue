@@ -12,7 +12,10 @@ import emitter from "@/events";
 import { useConfig } from "@/hooks/useConfig";
 import { useContext } from "@/hooks/useContext";
 import useFont from "@/hooks/useFont";
-import { getLastSessionSnapshot } from "@/services/launchState";
+import {
+  enableLastSessionSnapshotPersistence,
+  getLastSessionSnapshot,
+} from "@/services/launchState";
 import useOtherConfig from "@/hooks/useOtherConfig";
 import {
   isFileSidebarVisible,
@@ -247,33 +250,49 @@ async function restoreStartupState() {
   const mode = config.value.workspace?.startupMode ?? "new-file";
 
   if (mode === "custom-workspace") {
-    await openWorkspaceIfPossible(config.value.workspace?.startupPath);
+    try {
+      await openWorkspaceIfPossible(config.value.workspace?.startupPath);
+    } finally {
+      enableLastSessionSnapshotPersistence();
+    }
     return;
   }
 
   if (mode === "new-file") {
+    enableLastSessionSnapshotPersistence();
     return;
   }
 
   const lastSession = getLastSessionSnapshot();
-  if (!lastSession) return;
-
-  if (mode === "last-workspace") {
-    await openWorkspaceIfPossible(lastSession.workspacePath);
+  if (!lastSession) {
+    enableLastSessionSnapshotPersistence();
     return;
   }
 
-  await openWorkspaceIfPossible(lastSession.workspacePath);
-
-  for (const savedFilePath of lastSession.openFilePaths) {
-    await openFile(savedFilePath);
+  if (mode === "last-workspace") {
+    try {
+      await openWorkspaceIfPossible(lastSession.workspacePath);
+    } finally {
+      enableLastSessionSnapshotPersistence();
+    }
+    return;
   }
 
-  if (lastSession.activeFilePath) {
-    const existing = isFileAlreadyOpen(lastSession.activeFilePath);
-    if (existing) {
-      await switchToTab(existing.id);
+  try {
+    await openWorkspaceIfPossible(lastSession.workspacePath);
+
+    for (const savedFilePath of lastSession.openFilePaths) {
+      await openFile(savedFilePath);
     }
+
+    if (lastSession.activeFilePath) {
+      const existing = isFileAlreadyOpen(lastSession.activeFilePath);
+      if (existing) {
+        await switchToTab(existing.id);
+      }
+    }
+  } finally {
+    enableLastSessionSnapshotPersistence();
   }
 }
 
@@ -350,7 +369,11 @@ onMounted(async () => {
     const hasRealFileTab = tabs.value.some((tab) => Boolean(tab?.filePath));
     if (!hasRealFileTab) {
       await restoreStartupState();
+    } else {
+      enableLastSessionSnapshotPersistence();
     }
+  } else {
+    enableLastSessionSnapshotPersistence();
   }
 
   apiOnUpdateAvailable(handleUpdateAvailable)

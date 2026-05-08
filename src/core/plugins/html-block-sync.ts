@@ -16,7 +16,7 @@ export function createHtmlBlockSyncPlugin(): Plugin {
   return new Plugin({
     key: htmlBlockSyncPluginKey,
 
-    view(editorView) {
+    view() {
       return {
         update(view, prevState) {
           if (!prevState.selection.eq(view.state.selection)) {

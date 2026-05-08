@@ -46,7 +46,11 @@ mouse_position = "0.1.4"
 uuid = { version = "1.23.1", features = ["v4"] }
 tauri-plugin-single-instance = "2.4.1"
 # 阶段 6：自动更新
-reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls", "stream"] }
+reqwest = { version = "0.12.28", default-features = false, features = [
+  "json",
+  "rustls-tls",
+  "stream",
+] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 clipboard-win = "5.4.1"

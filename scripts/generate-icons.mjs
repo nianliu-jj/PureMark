@@ -99,11 +99,7 @@ function packIco(pngBuffers) {
   }
 
   // 拼接所有数据
-  return Buffer.concat([
-    header,
-    dirEntries,
-    ...pngBuffers.map((b) => b.png),
-  ]);
+  return Buffer.concat([header, dirEntries, ...pngBuffers.map((b) => b.png)]);
 }
 
 /**
@@ -145,9 +141,9 @@ async function main() {
     const svgBuffer = prepareSvg(icon.svg, icon.viewBox);
 
     // 收集所有需要的尺寸（去重）
-    const allSizes = [
-      ...new Set([...ICO_SIZES, ...ICNS_ENTRIES.map((e) => e.size)]),
-    ].sort((a, b) => a - b);
+    const allSizes = [...new Set([...ICO_SIZES, ...ICNS_ENTRIES.map((e) => e.size)])].sort(
+      (a, b) => a - b
+    );
 
     // 并行生成所有尺寸的 PNG
     const pngMap = {};
@@ -155,24 +151,18 @@ async function main() {
       allSizes.map(async (size) => {
         pngMap[size] = await renderPng(svgBuffer, size);
         console.log(`  PNG ${size}x${size} ✓`);
-      }),
+      })
     );
 
     // 打包 ICO
-    const icoData = packIco(
-      ICO_SIZES.map((size) => ({ size, png: pngMap[size] })),
-    );
+    const icoData = packIco(ICO_SIZES.map((size) => ({ size, png: pngMap[size] })));
     writeFileSync(`${icon.output}.ico`, icoData);
     console.log(`  \x1b[32mICO ✓\x1b[0m (${ICO_SIZES.join(", ")})`);
 
     // 打包 ICNS
-    const icnsData = packIcns(
-      ICNS_ENTRIES.map((e) => ({ type: e.type, png: pngMap[e.size] })),
-    );
+    const icnsData = packIcns(ICNS_ENTRIES.map((e) => ({ type: e.type, png: pngMap[e.size] })));
     writeFileSync(`${icon.output}.icns`, icnsData);
-    console.log(
-      `  \x1b[32mICNS ✓\x1b[0m (${ICNS_ENTRIES.map((e) => e.size).join(", ")})`,
-    );
+    console.log(`  \x1b[32mICNS ✓\x1b[0m (${ICNS_ENTRIES.map((e) => e.size).join(", ")})`);
   }
 
   console.log(`\n\x1b[32m图标生成完成\x1b[0m`);

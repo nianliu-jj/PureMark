@@ -8,7 +8,6 @@
  */
 
 import { Plugin, PluginKey, EditorState, Transaction } from "prosemirror-state";
-import { Node } from "prosemirror-model";
 import {
   createDecorationPlugin,
   findSyntaxMarkerRegions,

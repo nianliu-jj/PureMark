@@ -585,7 +585,6 @@ export class ImageView implements NodeView {
     if (!node) return;
 
     const nodeStart = pos;
-    const nodeEnd = pos + node.nodeSize;
 
     // 只有 NodeSelection 选中此节点时才进入编辑模式
     const isSelected = selection instanceof NodeSelection && selection.from === pos;

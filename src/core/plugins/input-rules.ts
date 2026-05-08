@@ -4,12 +4,7 @@
  * 自动转换 Markdown 语法
  */
 
-import {
-  inputRules,
-  wrappingInputRule,
-  textblockTypeInputRule,
-  InputRule,
-} from "prosemirror-inputrules";
+import { inputRules, wrappingInputRule, InputRule } from "prosemirror-inputrules";
 import { NodeType, MarkType, Schema, Fragment } from "prosemirror-model";
 import { Plugin, TextSelection } from "prosemirror-state";
 import { puremarkSchema } from "../schema";
@@ -392,7 +387,7 @@ function inlineCodeRule(markType: MarkType): InputRule {
  */
 function strongRule(markType: MarkType): InputRule {
   return createInlineRuleWithSyntax(
-    /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)$|(?<!_)(__)(?!_)(.+?)(?<!_)\1(?!_)$/,
+    /(?<!\*)(\*\*)(?!\*)(.+?)(?<!\*)\1(?!\*)$|(?<!_)(__)(?!_)(.+?)(?<!_)\3(?!_)$/,
     markType,
     (m) => m[1] || m[3],
     (m) => m[1] || m[3],

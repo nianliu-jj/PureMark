@@ -5,7 +5,7 @@
  */
 
 import { EditorState, Transaction, TextSelection } from "prosemirror-state";
-import { Node, Mark, MarkType, NodeType } from "prosemirror-model";
+import { Node } from "prosemirror-model";
 import { toggleMark, setBlockType, wrapIn, lift } from "prosemirror-commands";
 
 type Command = (state: EditorState, dispatch?: (tr: Transaction) => void) => boolean;

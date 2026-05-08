@@ -16,7 +16,7 @@ export function createImageSyncPlugin(): Plugin {
   return new Plugin({
     key: imageSyncPluginKey,
 
-    view(editorView) {
+    view() {
       return {
         update(view, prevState) {
           // 当选区变化时，更新所有图片的编辑状态

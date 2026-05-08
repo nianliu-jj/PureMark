@@ -11,24 +11,24 @@
  */
 
 /** 与 .oxlintrc.json 的 ignorePatterns 对应的路径片段。 */
-const OXLINT_IGNORED_SEGMENTS = ["/lang/", "/iconfont/", "/icons/", "/patches/"]
+const OXLINT_IGNORED_SEGMENTS = ["/lang/", "/iconfont/", "/icons/", "/patches/"];
 
 function filterLintable(filenames) {
   return filenames.filter((absPath) => {
-    const posix = absPath.replaceAll("\\", "/")
-    return !OXLINT_IGNORED_SEGMENTS.some((seg) => posix.includes(seg))
-  })
+    const posix = absPath.replaceAll("\\", "/");
+    return !OXLINT_IGNORED_SEGMENTS.some((seg) => posix.includes(seg));
+  });
 }
 
 function quote(paths) {
-  return paths.map((p) => `"${p}"`).join(" ")
+  return paths.map((p) => `"${p}"`).join(" ");
 }
 
 export default {
   "*.{js,ts,tsx,vue}": (filenames) => {
-    const lintable = filterLintable(filenames)
-    if (lintable.length === 0) return []
-    const args = quote(lintable)
-    return [`oxlint --fix ${args}`, `oxfmt ${args}`]
+    const lintable = filterLintable(filenames);
+    if (lintable.length === 0) return [];
+    const args = quote(lintable);
+    return [`oxlint --fix ${args}`, `oxfmt ${args}`];
   },
-}
+};
