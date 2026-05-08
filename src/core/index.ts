@@ -55,14 +55,6 @@ export {
   type PastePluginConfig,
 } from "./plugins/paste";
 
-export {
-  createAICompletionPlugin,
-  aiCompletionPluginKey,
-  type AICompletionConfig,
-  type AICompletionContext,
-  type AICompletionState,
-} from "./plugins/ai-completion";
-
 export { createPlaceholderPlugin, placeholderPluginKey } from "./plugins/placeholder";
 
 export { createLineNumbersPlugin, lineNumbersPluginKey } from "./plugins/line-numbers";

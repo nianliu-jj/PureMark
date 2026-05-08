@@ -5,7 +5,6 @@
 import type { Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { PastePluginConfig } from "../plugins/paste";
-import type { AICompletionConfig } from "../plugins/ai-completion";
 
 /** 编辑器配置 */
 export interface PureMarkConfig {
@@ -23,8 +22,6 @@ export interface PureMarkConfig {
   imagePathProcessor?: ImagePathProcessor;
   /** 粘贴插件配置 */
   pasteConfig?: PastePluginConfig;
-  /** AI 续写配置 */
-  aiConfig?: AICompletionConfig;
   /** 自定义插件 */
   plugins?: PureMarkPlugin[];
 }

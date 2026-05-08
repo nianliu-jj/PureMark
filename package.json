@@ -30,7 +30,6 @@
     "update:deps": "npx taze -w && pnpm i"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/comment": "^0.19.1",
     "@codemirror/lang-cpp": "^6.0.3",

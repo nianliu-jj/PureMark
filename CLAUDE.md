@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-简墨（PureMark）是一个基于 **Tauri + Vue 3 + 自研 ProseMirror 内核** 的桌面端 Markdown 编辑器，目标是提供接近 Typora 的即时渲染体验，同时支持源码模式、多标签页、多窗口、主题系统、图片上传、AI 续写、导出和工作区浏览。
+简墨（PureMark）是一个基于 **Tauri + Vue 3 + 自研 ProseMirror 内核** 的桌面端 Markdown 编辑器，目标是提供接近 Typora 的即时渲染体验，同时支持源码模式、多标签页、多窗口、主题系统、图片上传、导出和工作区浏览。
 
 ## 常用命令
 

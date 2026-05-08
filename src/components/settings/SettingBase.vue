@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AppIcon from "@/components/ui/AppIcon.vue";
-import AISetting from "./AISetting.vue";
 import ImageConfig from "./ImageConfig.vue";
 import SpellCheckSetter from "./SpellCheckSetter.vue";
 import WorkspaceSetting from "./WorkspaceSetting.vue";
@@ -17,12 +16,6 @@ const settingSections = [
     desc: "设置粘贴图片后的保存与上传方式",
     icon: "image-config",
     component: ImageConfig,
-  },
-  {
-    title: "AI 续写设置",
-    desc: "配置 AI 提供商、模型与连接参数",
-    icon: "magic-wand",
-    component: AISetting,
   },
   {
     title: "侧边栏",

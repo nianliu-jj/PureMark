@@ -31,7 +31,6 @@ import { createPastePlugin, saveImageLocally, ImagePasteMethod } from "./plugins
 import { createMathBlockSyncPlugin } from "./plugins/math-block-sync";
 import { createHtmlBlockSyncPlugin } from "./plugins/html-block-sync";
 import { createImageSyncPlugin } from "./plugins/image-sync";
-import { createAICompletionPlugin } from "./plugins/ai-completion";
 import { createPlaceholderPlugin } from "./plugins/placeholder";
 import { createLineNumbersPlugin } from "./plugins/line-numbers";
 import { createSourceViewTransformPlugin } from "./plugins/source-view-transform";
@@ -264,12 +263,6 @@ export class PureMarkEditor implements IPureMarkEditor {
       // 搜索插件
       createSearchPlugin(),
     ];
-
-    // AI 续写插件（如果配置了）
-    if (this.config.aiConfig) {
-      const aiConfig = this.config.aiConfig;
-      plugins.push(createAICompletionPlugin(() => aiConfig));
-    }
 
     // Placeholder 插件（如果配置了）
     if (this.config.placeholder) {

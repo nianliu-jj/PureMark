@@ -16,8 +16,6 @@ import {
 } from "@/core";
 import { undo, redo } from "prosemirror-history";
 import { uploadImage } from "@/services/api";
-import { AIService } from "@/services/ai";
-import { useAIConfig } from "@/hooks/useAIConfig";
 import { useConfig } from "@/hooks/useConfig";
 import useTab from "@/hooks/useTab";
 import emitter from "@/events";
@@ -32,7 +30,6 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { config: aiConfig, isEnabled: aiEnabled } = useAIConfig();
 const { config: appConfig, watchConf } = useConfig();
 const { scheduleAutoSave } = useTab();
 
@@ -158,18 +155,6 @@ function createEditorInstance() {
       },
       localImageSaver: async (file: File) => {
         return await saveImageLocally(file);
-      },
-    },
-    // AI 续写配置（使用 getter 函数以支持响应式更新）
-    aiConfig: {
-      get enabled() {
-        return aiEnabled.value;
-      },
-      get debounceWait() {
-        return aiConfig.value.debounceWait;
-      },
-      complete: async (context) => {
-        return await AIService.complete(aiConfig.value, context);
       },
     },
   };
