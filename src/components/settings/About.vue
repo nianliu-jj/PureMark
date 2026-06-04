@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import autotoast from "autotoast.js";
 import { openExternal } from "@/services/api";
-import { checkUpdate, type UpdateInfo } from "@/services/api/update";
+import {
+  checkUpdate,
+  downloadUpdate,
+  quitAndInstall,
+  onUpdateStatus,
+  onDownloadProgress,
+  type UpdateInfo,
+  type UpdateProgressPayload,
+} from "@/services/api/update";
 import { version } from "../../../package.json";
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import LoadingIcon from "../ui/LoadingIcon.vue";
 
@@ -16,7 +24,6 @@ function openByDefaultBrowser(url: string) {
 function readStoredUpdateInfo(): Partial<UpdateInfo> {
   const raw = localStorage.getItem("updateInfo");
   if (!raw) return {};
-
   try {
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -26,12 +33,6 @@ function readStoredUpdateInfo(): Partial<UpdateInfo> {
     return {};
   }
 }
-
-const storedUpdateInfo = ref<Partial<UpdateInfo>>(readStoredUpdateInfo());
-const hasNewVersion = computed(() => {
-  const storedVersion = storedUpdateInfo.value.version;
-  return Boolean(storedVersion && isNewerVersion(storedVersion, version));
-});
 
 function isNewerVersion(stored: string, current: string): boolean {
   const s = stored.replace(/^v/, "").split(".").map(Number);
@@ -44,43 +45,73 @@ function isNewerVersion(stored: string, current: string): boolean {
   }
   return false;
 }
-const isChecking = ref(false);
 
-function handleCheckUpdate() {
-  if (isChecking.value) {
-    console.log("[About] Already checking for updates, skipping...");
-    return;
-  }
+const storedUpdateInfo = ref<Partial<UpdateInfo>>(readStoredUpdateInfo());
+const hasNewVersion = computed(() =>
+  Boolean(storedUpdateInfo.value.version && isNewerVersion(storedUpdateInfo.value.version, version))
+);
 
-  console.log("[About] Starting update check...");
-  isChecking.value = true;
+// 状态：idle | checking | downloading | installing
+const updatePhase = ref<"idle" | "checking" | "downloading" | "installing">("idle");
+const downloadPercent = ref(0);
+
+async function handleCheckUpdate() {
+  if (updatePhase.value !== "idle") return;
+  updatePhase.value = "checking";
   localStorage.removeItem("ignoredVersion");
 
-  checkUpdate()
-    .then((info) => {
-      console.log("[About] Update check completed:", info);
-      isChecking.value = false;
-
-      if (info && info.version) {
-        console.log("[About] New version available:", info.version);
-        storedUpdateInfo.value = info;
-        localStorage.setItem("updateInfo", JSON.stringify(info));
-      } else {
-        console.log("[About] Already on latest version");
-        autotoast.show("当前已为最新版本", "success");
-      }
-    })
-    .catch((err) => {
-      console.error("[About] checkUpdate error:", err);
-      autotoast.show(`检查更新失败: ${err.message || "Unknown error"}`, "error");
-      isChecking.value = false;
-    })
-    .finally(() => {
-      // 确保状态总是被重置
-      console.log("[About] Update check finished, resetting state");
-      isChecking.value = false;
-    });
+  try {
+    const info = await checkUpdate();
+    if (info?.version) {
+      storedUpdateInfo.value = info;
+      localStorage.setItem("updateInfo", JSON.stringify(info));
+    } else {
+      autotoast.show("当前已为最新版本", "success");
+    }
+  } catch (err: any) {
+    autotoast.show(`检查更新失败: ${err.message || "未知错误"}`, "error");
+  } finally {
+    updatePhase.value = "idle";
+  }
 }
+
+async function handleDownloadAndInstall() {
+  if (updatePhase.value !== "idle") return;
+  updatePhase.value = "downloading";
+  downloadPercent.value = 0;
+
+  try {
+    await downloadUpdate();
+    updatePhase.value = "installing";
+    await quitAndInstall();
+  } catch (err: any) {
+    autotoast.show(`更新失败: ${err.message || "未知错误"}`, "error");
+    updatePhase.value = "idle";
+  }
+}
+
+// 监听后端进度事件（支持多窗口广播）
+let unlistenStatus: (() => void) | null = null;
+let unlistenProgress: (() => void) | null = null;
+
+onMounted(async () => {
+  unlistenStatus = await onUpdateStatus((payload) => {
+    if (payload.status === "downloaded") {
+      updatePhase.value = "installing";
+    } else if (payload.status === "error") {
+      autotoast.show(`更新失败: ${payload.error || "未知错误"}`, "error");
+      updatePhase.value = "idle";
+    }
+  });
+  unlistenProgress = await onDownloadProgress((payload: UpdateProgressPayload) => {
+    downloadPercent.value = Math.round(payload.percent);
+  });
+});
+
+onUnmounted(() => {
+  unlistenStatus?.();
+  unlistenProgress?.();
+});
 </script>
 
 <template>
@@ -88,15 +119,34 @@ function handleCheckUpdate() {
     <h1 class="link" @click="openByDefaultBrowser(`https://github.com/nianliu-jj/PureMark`)">
       <img :src="logoSvg" class="logo" /> 简墨 PureMark
     </h1>
+
     <p>
-      <span class="link version" @click="handleCheckUpdate">
-        <span>version: v{{ version }} </span>
-        <span v-if="isChecking" class="updateTip loading">
-          <LoadingIcon />
-        </span>
-        <span v-else-if="hasNewVersion" class="updateTip">new</span>
+      <span class="version">
+        <span>version: v{{ version }}</span>
       </span>
     </p>
+
+    <!-- 检查更新 / 下载安装 按钮 -->
+    <p>
+      <button
+        class="updateBtn"
+        :disabled="updatePhase !== 'idle'"
+        @click="hasNewVersion ? handleDownloadAndInstall() : handleCheckUpdate()"
+      >
+        <span v-if="updatePhase === 'checking'">
+          <LoadingIcon class="btnIcon" /> 检查中…
+        </span>
+        <span v-else-if="updatePhase === 'downloading'">
+          <LoadingIcon class="btnIcon" /> 下载中 {{ downloadPercent }}%
+        </span>
+        <span v-else-if="updatePhase === 'installing'">
+          <LoadingIcon class="btnIcon" /> 安装中…
+        </span>
+        <span v-else-if="hasNewVersion"> ↑ 更新到 v{{ storedUpdateInfo.version }} </span>
+        <span v-else>检查更新</span>
+      </button>
+    </p>
+
     <p>MIT Copyright © [2025] NianLiu</p>
     <p>
       项目主页：
@@ -126,47 +176,32 @@ function handleCheckUpdate() {
     gap: 6px;
   }
 
-  .updateTip {
-    background: var(--secondary-color);
-    color: white;
-    font-size: 12px;
-    border-radius: 4px;
-    padding: 2px 8px;
-    margin-left: 4px;
-    vertical-align: middle;
+  .updateBtn {
+    font-size: 13px;
+    padding: 5px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #ddd);
+    background: var(--card-color, #fff);
+    color: var(--text-color);
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    transition: background 0.15s;
 
-    &.loading {
-      background: transparent;
-      padding: 0;
+    &:hover:not(:disabled) {
+      background: var(--primary-color-hover, #e8f0fe);
+    }
 
-      svg {
-        font-size: 12px;
-        color: var(--primary-color);
-      }
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
     }
   }
 
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .tip {
-    position: absolute;
-    bottom: 30px;
-    font-size: 10px;
-    color: var(--primary-color-transparent);
+  .btnIcon {
+    font-size: 12px;
+    color: var(--primary-color);
   }
 
   h1 {
