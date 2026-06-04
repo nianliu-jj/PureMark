@@ -13,6 +13,7 @@ import { EditorView, NodeView } from "prosemirror-view";
 import { NodeSelection, Selection } from "prosemirror-state";
 import { resolveImageSrcForDisplay } from "@/plugins/imagePathPlugin";
 import { sourceViewManager } from "../decorations";
+import { buildImageSourceText, parseHtmlImageSource } from "../utils/html-image";
 
 // 存储所有 ImageView 实例，用于全局更新
 const imageViews = new Set<ImageView>();
@@ -39,9 +40,14 @@ export function updateAllImages(view: EditorView): void {
  * 解析图片 Markdown 语法
  * 格式: ![alt](src "title") 或 [![alt](src "title")](href "linkTitle")
  */
-function parseImageMarkdown(
-  markdown: string
-): { src: string; alt: string; title: string; linkHref?: string; linkTitle?: string } | null {
+function parseImageMarkdown(markdown: string): {
+  src: string;
+  alt: string;
+  title: string;
+  linkHref?: string;
+  linkTitle?: string;
+  htmlSource?: string;
+} | null {
   // 先尝试匹配链接图片 [![alt](src "title")](href "linkTitle")
   const linkedMatch = markdown.match(
     /^\[!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/
@@ -63,6 +69,19 @@ function parseImageMarkdown(
     src: match[2] || "",
     title: match[3] || "",
   };
+}
+
+function parseImageSource(source: string): {
+  src: string;
+  alt: string;
+  title: string;
+  linkHref?: string;
+  linkTitle?: string;
+  htmlSource?: string;
+} | null {
+  const htmlImage = parseHtmlImageSource(source);
+  if (htmlImage) return htmlImage;
+  return parseImageMarkdown(source);
 }
 
 /**
@@ -268,23 +287,7 @@ export class ImageView implements NodeView {
    */
   private updateSourceText(): void {
     if (!this.sourceTextElement) return;
-    const { src, alt, title, linkHref, linkTitle } = this.node.attrs;
-    let imgMarkdown = `![${alt}](${src}`;
-    if (title) {
-      imgMarkdown += ` "${title}"`;
-    }
-    imgMarkdown += ")";
-    let markdown: string;
-    if (linkHref) {
-      markdown = `[${imgMarkdown}](${linkHref}`;
-      if (linkTitle) {
-        markdown += ` "${linkTitle}"`;
-      }
-      markdown += ")";
-    } else {
-      markdown = imgMarkdown;
-    }
-    this.sourceTextElement.textContent = markdown;
+    this.sourceTextElement.textContent = buildImageSourceText(this.node.attrs);
   }
 
   /**
@@ -300,7 +303,7 @@ export class ImageView implements NodeView {
   private applySourceTextChange(): void {
     if (!this.sourceTextElement) return;
     const newMarkdown = this.sourceTextElement.textContent?.trim() || "";
-    const parsed = parseImageMarkdown(newMarkdown);
+    const parsed = parseImageSource(newMarkdown);
 
     if (!parsed) {
       // 解析失败，恢复原始值
@@ -312,7 +315,7 @@ export class ImageView implements NodeView {
     if (pos === undefined) return;
 
     const { state } = this.view;
-    const { src, alt, title, linkHref, linkTitle } = this.node.attrs;
+    const { src, alt, title, linkHref, linkTitle, htmlSource } = this.node.attrs;
 
     // 检查是否有变化
     if (
@@ -320,7 +323,8 @@ export class ImageView implements NodeView {
       parsed.alt === alt &&
       parsed.title === title &&
       (parsed.linkHref || "") === (linkHref || "") &&
-      (parsed.linkTitle || "") === (linkTitle || "")
+      (parsed.linkTitle || "") === (linkTitle || "") &&
+      (parsed.htmlSource || "") === (htmlSource || "")
     ) {
       return;
     }
@@ -332,6 +336,7 @@ export class ImageView implements NodeView {
       title: parsed.title,
       linkHref: parsed.linkHref || "",
       linkTitle: parsed.linkTitle || "",
+      htmlSource: parsed.htmlSource || "",
     });
     this.view.dispatch(tr);
   }
@@ -464,22 +469,7 @@ export class ImageView implements NodeView {
   }
 
   private updateSourceInput(): void {
-    const { src, alt, title, linkHref, linkTitle } = this.node.attrs;
-    let imgMarkdown = `![${alt}](${src}`;
-    if (title) {
-      imgMarkdown += ` "${title}"`;
-    }
-    imgMarkdown += ")";
-    if (linkHref) {
-      let markdown = `[${imgMarkdown}](${linkHref}`;
-      if (linkTitle) {
-        markdown += ` "${linkTitle}"`;
-      }
-      markdown += ")";
-      this.sourceInput.value = markdown;
-    } else {
-      this.sourceInput.value = imgMarkdown;
-    }
+    this.sourceInput.value = buildImageSourceText(this.node.attrs);
   }
 
   /**
@@ -487,7 +477,7 @@ export class ImageView implements NodeView {
    */
   private previewSourceChange(): void {
     const newMarkdown = this.sourceInput.value.trim();
-    const parsed = parseImageMarkdown(newMarkdown);
+    const parsed = parseImageSource(newMarkdown);
 
     if (parsed) {
       // 实时更新图片预览
@@ -503,7 +493,7 @@ export class ImageView implements NodeView {
    */
   private applySourceChange(): void {
     const newMarkdown = this.sourceInput.value.trim();
-    const parsed = parseImageMarkdown(newMarkdown);
+    const parsed = parseImageSource(newMarkdown);
 
     if (!parsed) {
       // 解析失败，恢复原始值
@@ -515,7 +505,7 @@ export class ImageView implements NodeView {
     if (pos === undefined) return;
 
     const { state } = this.view;
-    const { src, alt, title, linkHref, linkTitle } = this.node.attrs;
+    const { src, alt, title, linkHref, linkTitle, htmlSource } = this.node.attrs;
 
     // 检查是否有变化
     if (
@@ -523,7 +513,8 @@ export class ImageView implements NodeView {
       parsed.alt === alt &&
       parsed.title === title &&
       (parsed.linkHref || "") === (linkHref || "") &&
-      (parsed.linkTitle || "") === (linkTitle || "")
+      (parsed.linkTitle || "") === (linkTitle || "") &&
+      (parsed.htmlSource || "") === (htmlSource || "")
     ) {
       return;
     }
@@ -535,6 +526,7 @@ export class ImageView implements NodeView {
       title: parsed.title,
       linkHref: parsed.linkHref || "",
       linkTitle: parsed.linkTitle || "",
+      htmlSource: parsed.htmlSource || "",
     });
     this.view.dispatch(tr);
   }

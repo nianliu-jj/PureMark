@@ -5,6 +5,7 @@
  */
 
 import { Node, Mark, Fragment } from "prosemirror-model";
+import { buildImageSourceText } from "../utils/html-image";
 
 /** 序列化选项 */
 export interface SerializeOptions {
@@ -274,12 +275,16 @@ export class MarkdownSerializer {
       const title = node.attrs.title || "";
       const linkHref = node.attrs.linkHref || "";
       const linkTitle = node.attrs.linkTitle || "";
+      const htmlSource = node.attrs.htmlSource || "";
       const consecutiveGroup = node.attrs.consecutiveGroup || null;
-      const titlePart = title ? ` "${title}"` : "";
-      const imgMarkdown = `![${alt}](${src}${titlePart})`;
-      const markdown = linkHref
-        ? `[${imgMarkdown}](${linkHref}${linkTitle ? ` "${linkTitle}"` : ""})`
-        : imgMarkdown;
+      const markdown = buildImageSourceText({
+        alt,
+        src,
+        title,
+        linkHref,
+        linkTitle,
+        htmlSource,
+      });
       const prevNode = index > 0 ? fragment.child(index - 1) : null;
       const nextNode = index + 1 < fragment.childCount ? fragment.child(index + 1) : null;
       const prevSameGroup =
@@ -343,14 +348,8 @@ export class MarkdownSerializer {
         const title = child.attrs.title || "";
         const linkHref = child.attrs.linkHref || "";
         const linkTitle = child.attrs.linkTitle || "";
-        const titlePart = title ? ` "${title}"` : "";
-        const imgMarkdown = `![${alt}](${src}${titlePart})`;
-        if (linkHref) {
-          const linkTitlePart = linkTitle ? ` "${linkTitle}"` : "";
-          result += `[${imgMarkdown}](${linkHref}${linkTitlePart})`;
-        } else {
-          result += imgMarkdown;
-        }
+        const htmlSource = child.attrs.htmlSource || "";
+        result += buildImageSourceText({ alt, src, title, linkHref, linkTitle, htmlSource });
       }
     });
 

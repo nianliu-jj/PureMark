@@ -448,6 +448,7 @@ const image: NodeSpec = {
     title: { default: "" },
     linkHref: { default: "" },
     linkTitle: { default: "" },
+    htmlSource: { default: "" },
     consecutiveGroup: { default: null },
   },
   group: "block",
@@ -464,6 +465,7 @@ const image: NodeSpec = {
           title: el.getAttribute("title") || "",
           linkHref: parentA?.getAttribute("href") || "",
           linkTitle: parentA?.getAttribute("title") || "",
+          htmlSource: "",
         };
       },
     },

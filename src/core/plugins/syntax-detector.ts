@@ -8,6 +8,7 @@
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { decorationPluginKey } from "../decorations";
+import { parseHtmlImageSource } from "../utils/html-image";
 
 /** 插件 Key */
 export const syntaxDetectorPluginKey = new PluginKey("puremark-syntax-detector");
@@ -811,6 +812,54 @@ export function createSyntaxDetectorPlugin(): Plugin {
       const decoState = decorationPluginKey.getState(newState);
       const isSourceView = decoState?.sourceView ?? false;
       if (!isSourceView) {
+        const htmlImagesToConvert: Array<{
+          pos: number;
+          src: string;
+          alt: string;
+          title: string;
+          htmlSource: string;
+        }> = [];
+
+        newState.doc.descendants((node, pos) => {
+          if (
+            node.type.name === "paragraph" &&
+            !node.attrs.codeBlockId &&
+            !node.attrs.tableId &&
+            !node.attrs.htmlBlockId &&
+            !node.attrs.mathBlockId
+          ) {
+            const htmlImage = parseHtmlImageSource(node.textContent);
+            if (htmlImage) {
+              htmlImagesToConvert.push({
+                pos,
+                src: htmlImage.src,
+                alt: htmlImage.alt,
+                title: htmlImage.title,
+                htmlSource: htmlImage.htmlSource,
+              });
+            }
+          }
+          return true;
+        });
+
+        const htmlImageNodeType = schema.nodes.image;
+        if (htmlImageNodeType && htmlImagesToConvert.length > 0) {
+          for (const htmlImage of htmlImagesToConvert.reverse()) {
+            const imageNode = htmlImageNodeType.create({
+              src: htmlImage.src,
+              alt: htmlImage.alt,
+              title: htmlImage.title,
+              htmlSource: htmlImage.htmlSource,
+            });
+            tr = tr.replaceWith(
+              htmlImage.pos,
+              htmlImage.pos + tr.doc.nodeAt(htmlImage.pos)!.nodeSize,
+              imageNode
+            );
+            hasChanges = true;
+          }
+        }
+
         // 检测 HTML 块语法（段落以 <tagname 开头）并转换为 html_block 节点
         const htmlBlockPattern = /^<([a-zA-Z][a-zA-Z0-9]*)/;
         // 验证开始标签结构完整（必须有闭合的 >）
@@ -878,6 +927,7 @@ export function createSyntaxDetectorPlugin(): Plugin {
             const text = node.textContent;
             const match = text.match(htmlBlockPattern);
             if (match && !/^<(?:https?:\/\/|mailto:)/i.test(text)) {
+              if (parseHtmlImageSource(text)) return true;
               const tagName = match[1];
               // 跳过行内元素，它们不应转为块级 html_block
               if (inlineElements.has(tagName.toLowerCase())) return true;

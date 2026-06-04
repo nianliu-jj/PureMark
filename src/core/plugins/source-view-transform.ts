@@ -11,6 +11,7 @@ import { ReplaceStep } from "prosemirror-transform";
 import { decorationPluginKey } from "../decorations";
 import { parseMarkdown } from "../parser";
 import { MarkdownSerializer } from "../serializer";
+import { buildImageSourceText, parseHtmlImageSource } from "../utils/html-image";
 
 /** 插件 Key */
 export const sourceViewTransformPluginKey = new PluginKey("puremark-source-view-transform");
@@ -34,20 +35,14 @@ function generateConsecutiveImageGroupId(): string {
 }
 
 function buildImageMarkdown(image: ProseMirrorNode): string {
-  const alt = image.attrs.alt || "";
-  const src = image.attrs.src || "";
-  const title = image.attrs.title || "";
-  const linkHref = image.attrs.linkHref || "";
-  const linkTitle = image.attrs.linkTitle || "";
-  const titlePart = title ? ` "${title}"` : "";
-  const imgMarkdown = `![${alt}](${src}${titlePart})`;
-
-  if (linkHref) {
-    const linkTitlePart = linkTitle ? ` "${linkTitle}"` : "";
-    return `[${imgMarkdown}](${linkHref}${linkTitlePart})`;
-  }
-
-  return imgMarkdown;
+  return buildImageSourceText({
+    alt: image.attrs.alt || "",
+    src: image.attrs.src || "",
+    title: image.attrs.title || "",
+    linkHref: image.attrs.linkHref || "",
+    linkTitle: image.attrs.linkTitle || "",
+    htmlSource: image.attrs.htmlSource || "",
+  });
 }
 
 const IMAGE_TOKEN_PATTERNS = {
@@ -135,8 +130,9 @@ function transformImageToParagraph(image: ProseMirrorNode, schema: Schema): Pros
   const title = image.attrs.title || "";
   const linkHref = image.attrs.linkHref || "";
   const linkTitle = image.attrs.linkTitle || "";
+  const htmlSource = image.attrs.htmlSource || "";
   return schema.nodes.paragraph.create(
-    { imageAttrs: { src, alt, title, linkHref, linkTitle } },
+    { imageAttrs: { src, alt, title, linkHref, linkTitle, htmlSource } },
     schema.text(buildImageMarkdown(image))
   );
 }
@@ -163,6 +159,16 @@ function transformParagraphToImage(
 
   // 优先从段落文本中解析最新的图片属性（用户可能编辑了源码）
   const text = paragraph.textContent;
+
+  const htmlImage = parseHtmlImageSource(text);
+  if (htmlImage) {
+    return schema.nodes.image.create({
+      alt: htmlImage.alt,
+      src: htmlImage.src,
+      title: htmlImage.title,
+      htmlSource: htmlImage.htmlSource,
+    });
+  }
 
   // 先尝试匹配链接图片 [![alt](src "title")](href "linkTitle")
   const linkedMatch = text.match(
@@ -393,6 +399,16 @@ function transformParagraphsToHtmlBlock(
 
   const lines = paragraphs.map((p) => p.node.textContent);
   const content = lines.join("\n");
+
+  const htmlImage = parseHtmlImageSource(content);
+  if (htmlImage) {
+    return schema.nodes.image.create({
+      alt: htmlImage.alt,
+      src: htmlImage.src,
+      title: htmlImage.title,
+      htmlSource: htmlImage.htmlSource,
+    });
+  }
 
   // 验证内容是否以 HTML 标签开头
   const tagMatch = content.match(/^<([a-zA-Z][a-zA-Z0-9]*)/);

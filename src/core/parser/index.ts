@@ -17,6 +17,7 @@
 import { Node, Schema, Mark } from "prosemirror-model";
 import { puremarkSchema } from "../schema";
 import type { SyntaxMarker } from "../types";
+import { parseHtmlImageSource } from "../utils/html-image";
 
 /** 解析结果 */
 export interface ParseResult {
@@ -289,6 +290,20 @@ export class MarkdownParser {
       const headingMatch = line.match(BLOCK_PATTERNS.heading);
       if (headingMatch) {
         blocks.push(this.parseHeading(headingMatch));
+        i++;
+        continue;
+      }
+
+      const htmlImage = parseHtmlImageSource(line);
+      if (htmlImage) {
+        blocks.push(
+          this.schema.node("image", {
+            src: htmlImage.src,
+            alt: htmlImage.alt,
+            title: htmlImage.title,
+            htmlSource: htmlImage.htmlSource,
+          })
+        );
         i++;
         continue;
       }
