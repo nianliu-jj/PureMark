@@ -3,6 +3,7 @@ import { computed, useAttrs } from "vue";
 import type { FunctionalComponent } from "vue";
 import type { LucideProps } from "lucide-vue-next";
 import {
+  ChevronLeft,
   ChevronRight,
   CircleAlert,
   CircleCheckBig,
@@ -37,6 +38,7 @@ import {
 } from "lucide-vue-next";
 
 const iconMap = {
+  "arrow-left": ChevronLeft,
   "arrow-right": ChevronRight,
   "check-circle": CircleCheckBig,
   "circle-check": CircleCheckBig,

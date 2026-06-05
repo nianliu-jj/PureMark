@@ -50,6 +50,11 @@ const menuOptions: Array<{
   { label: "关于", action: () => (activeTab.value = "about"), icon: "github", value: "about" },
 ];
 
+// 退出首选项面板：复用全局 Escape 关闭逻辑（见 MenuDropDown 的 handleKeydown）
+function exitPreferences() {
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+}
+
 onMounted(() => {
   if (hasAutoCheckedUpdate) return;
   hasAutoCheckedUpdate = true;
@@ -63,15 +68,21 @@ onMounted(() => {
 <template>
   <div class="MenubarBox">
     <div class="optionsContainer">
-      <button
-        v-for="option in menuOptions"
-        :key="option.label"
-        class="menu-option"
-        :class="{ active: activeTab === option.value }"
-        @click="option.action"
-      >
-        <AppIcon :name="option.icon" class="menu-option-icon" />
-        {{ option.label }}
+      <div class="menu-options">
+        <button
+          v-for="option in menuOptions"
+          :key="option.label"
+          class="menu-option"
+          :class="{ active: activeTab === option.value }"
+          @click="option.action"
+        >
+          <AppIcon :name="option.icon" class="menu-option-icon" />
+          {{ option.label }}
+        </button>
+      </div>
+      <button class="back-button" title="返回" @click="exitPreferences">
+        <AppIcon name="arrow-left" class="back-button-icon" />
+        返回
       </button>
     </div>
     <div class="detailContainer">
@@ -116,12 +127,22 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
     padding: 12px 0;
     width: 200px;
     gap: 4px;
     -webkit-app-region: drag;
     background: var(--background-color);
+
+    .menu-options {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
 
     .menu-option {
       cursor: pointer;
@@ -149,6 +170,38 @@ onMounted(() => {
       &.active {
         background: var(--active-color);
         font-weight: bold;
+      }
+    }
+
+    .back-button {
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      flex-shrink: 0;
+      margin: 4px 12px 0;
+      padding: 12px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--border-color-1);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-color-2);
+      transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+
+      .back-button-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      &:hover {
+        background: var(--hover-color);
+        color: var(--text-color);
+        border-color: var(--border-color-2);
       }
     }
   }
