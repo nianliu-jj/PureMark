@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import autotoast from "autotoast.js";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import SaveConfirmDialog from "@/components/dialogs/SaveConfirmDialog.vue";
 import UpdateConfirmDialog from "@/components/dialogs/UpdateConfirmDialog.vue";
 import PureMarkEditor from "@/components/editor/PureMarkEditor.vue";
@@ -157,6 +158,16 @@ const editorAreaStyle = computed(() => ({
   "--file-sidebar-width": `${fileSidebarWidth.value}px`,
   "--outline-sidebar-width": `${outlineSidebarWidth.value}px`,
 }));
+const workspaceBackgroundImageSrc = computed(() =>
+  resolveWorkspaceBackgroundImageSrc(
+    config.value.appearance?.workspaceBackgroundImagePath?.trim() ?? ""
+  )
+);
+const workspaceBackgroundOpacity = computed(
+  () =>
+    normalizeWorkspaceBackgroundOpacity(config.value.appearance?.workspaceBackgroundOpacity) / 100
+);
+const hasWorkspaceBackground = computed(() => Boolean(workspaceBackgroundImageSrc.value));
 
 function getConfigSidebarWidth(side: SidebarPane) {
   if (side === "file") {
@@ -172,6 +183,22 @@ function getConfigSidebarWidth(side: SidebarPane) {
     config.value.workspace?.sidebarWidth ??
     DEFAULT_SIDEBAR_WIDTH
   );
+}
+
+function normalizeWorkspaceBackgroundOpacity(value: unknown): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 35;
+  return Math.min(Math.max(Math.round(value), 0), 100);
+}
+
+function resolveWorkspaceBackgroundImageSrc(path: string): string {
+  if (!path) return "";
+  if (/^(https?:|data:|blob:|asset:|tauri:|file:)/i.test(path)) return path;
+
+  try {
+    return convertFileSrc(path);
+  } catch {
+    return path;
+  }
 }
 
 function updateSidebarWidth(side: SidebarPane, nextWidth: number, persist = false) {
@@ -444,7 +471,19 @@ const handleInstall = async () => {
 <template>
   <TitleBar />
   <div id="fontRoot">
-    <div ref="editorAreaRef" class="editorArea" :style="editorAreaStyle">
+    <div
+      ref="editorAreaRef"
+      class="editorArea"
+      :class="{ 'has-workspace-background': hasWorkspaceBackground }"
+      :style="editorAreaStyle"
+    >
+      <div v-if="hasWorkspaceBackground" class="workspaceBackgroundLayer" aria-hidden="true">
+        <img
+          :src="workspaceBackgroundImageSrc"
+          :style="{ opacity: workspaceBackgroundOpacity }"
+          alt=""
+        />
+      </div>
       <div
         class="sidebarSlot left"
         :class="{ visible: isFileSidebarVisible }"
@@ -538,6 +577,24 @@ const handleInstall = async () => {
   display: flex;
   overflow: hidden;
   min-width: 0;
+  position: relative;
+  background: var(--background-color-1);
+
+  .workspaceBackgroundLayer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    background: var(--background-color-1);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  }
 
   .sidebarSlot {
     height: 100%;
@@ -548,6 +605,8 @@ const handleInstall = async () => {
       width 0.2s ease,
       opacity 0.2s ease;
     pointer-events: none;
+    position: relative;
+    z-index: 1;
 
     &.visible {
       opacity: 1;
@@ -574,6 +633,7 @@ const handleInstall = async () => {
     min-width: 0;
     height: 100%;
     position: relative;
+    z-index: 1;
   }
 
   .sidebarResizeHandle {
@@ -586,6 +646,8 @@ const handleInstall = async () => {
     cursor: col-resize;
     -webkit-app-region: no-drag;
     touch-action: none;
+    position: relative;
+    z-index: 2;
 
     .sidebarResizeLine {
       width: 2px;
@@ -602,6 +664,29 @@ const handleInstall = async () => {
         width: 3px;
         background: color-mix(in srgb, var(--active-color) 80%, white 20%);
       }
+    }
+  }
+
+  &.has-workspace-background {
+    .sidebarPanel {
+      background: color-mix(in srgb, var(--background-color-2) 78%, transparent);
+      backdrop-filter: blur(2px);
+    }
+
+    :deep(.OutlinePanel) {
+      background: color-mix(in srgb, var(--background-color-2) 78%, transparent);
+    }
+
+    :deep(.change-folder-bar) {
+      background: color-mix(in srgb, var(--background-color) 72%, transparent);
+    }
+
+    :deep(.editor-box),
+    :deep(.puremark-editor-instance),
+    :deep(.puremark-container),
+    :deep(.scrollView),
+    :deep(.puremark-editor) {
+      background: transparent;
     }
   }
 }

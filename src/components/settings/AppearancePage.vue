@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BackgroundPanel from "./BackgroundPanel.vue";
 import FontPage from "./FontPage.vue";
 import OtherSetting from "./OtherSetting.vue";
 import ThemePage from "./ThemePage.vue";
@@ -11,6 +12,13 @@ import ThemePage from "./ThemePage.vue";
 
       <div class="appearance-item-content">
         <ThemePage />
+      </div>
+    </div>
+    <div class="appearance-item">
+      <h2>背景板</h2>
+
+      <div class="appearance-item-content">
+        <BackgroundPanel />
       </div>
     </div>
     <div class="appearance-item">

@@ -25,6 +25,10 @@ interface AppConfig extends Record<string, any> {
     localPath: string;
   };
   upload: UploadConfig;
+  appearance: {
+    workspaceBackgroundImagePath: string;
+    workspaceBackgroundOpacity: number;
+  };
   other: {
     editorPadding: string;
     autoPairSymbols: boolean;
@@ -55,6 +59,10 @@ const defaultConfig: AppConfig = {
     localPath: "/assets",
   },
   upload: defaultUploadConfig,
+  appearance: {
+    workspaceBackgroundImagePath: "",
+    workspaceBackgroundOpacity: 35,
+  },
   other: {
     editorPadding: "120px",
     autoPairSymbols: true,
@@ -104,6 +112,13 @@ function mergeAppConfig(partial?: Partial<AppConfig>): AppConfig {
       ...defaultConfig.upload,
       ...partial?.upload,
     },
+    appearance: {
+      ...defaultConfig.appearance,
+      ...partial?.appearance,
+      workspaceBackgroundOpacity: normalizeWorkspaceBackgroundOpacity(
+        partial?.appearance?.workspaceBackgroundOpacity
+      ),
+    },
     other: {
       ...defaultConfig.other,
       ...partial?.other,
@@ -131,6 +146,14 @@ function mergeAppConfig(partial?: Partial<AppConfig>): AppConfig {
           : defaultConfig.workspace.startupMode),
     },
   };
+}
+
+function normalizeWorkspaceBackgroundOpacity(value: unknown): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return defaultConfig.appearance.workspaceBackgroundOpacity;
+  }
+
+  return Math.min(Math.max(Math.round(value), 0), 100);
 }
 
 function normalizeFontConfig(fontConfig: FontConfig): FontConfig {
