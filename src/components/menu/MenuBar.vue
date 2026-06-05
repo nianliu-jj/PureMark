@@ -3,13 +3,12 @@ import { computed, onMounted, ref, type Component } from "vue";
 import About from "@/components/settings/About.vue";
 import appearancePage from "@/components/settings/AppearancePage.vue";
 import FileOptions from "@/components/settings/FileOptions.vue";
-import Language from "@/components/settings/Language.vue";
 import SettingBase from "@/components/settings/SettingBase.vue";
 import ShortcutPage from "@/components/settings/ShortcutPage.vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import { checkUpdate } from "@/services/api/update.js";
 
-type MenuTab = "settings" | "about" | "appearance" | "file" | "language" | "shortcut";
+type MenuTab = "settings" | "about" | "appearance" | "file" | "shortcut";
 
 let hasAutoCheckedUpdate = false;
 
@@ -17,7 +16,6 @@ const activeTab = ref<MenuTab>("file");
 const menuComponents: Record<MenuTab, Component> = {
   settings: SettingBase,
   about: About,
-  language: Language,
   appearance: appearancePage,
   file: FileOptions,
   shortcut: ShortcutPage,
@@ -48,12 +46,6 @@ const menuOptions: Array<{
     action: () => (activeTab.value = "shortcut"),
     icon: "shortcut-key",
     value: "shortcut",
-  },
-  {
-    label: "语言",
-    action: () => (activeTab.value = "language"),
-    icon: "fanyi",
-    value: "language",
   },
   { label: "关于", action: () => (activeTab.value = "about"), icon: "github", value: "about" },
 ];

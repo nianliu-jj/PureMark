@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import AppIcon from "@/components/ui/AppIcon.vue";
 import ImageConfig from "./ImageConfig.vue";
+import Language from "./Language.vue";
 import SpellCheckSetter from "./SpellCheckSetter.vue";
 import WorkspaceSetting from "./WorkspaceSetting.vue";
 
 const settingSections = [
+  {
+    title: "语言",
+    desc: "设置应用界面的显示语言",
+    icon: "fanyi",
+    component: Language,
+  },
   {
     title: "拼写检查",
     desc: "控制编辑器中的拼写检查能力",

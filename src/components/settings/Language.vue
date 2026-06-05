@@ -54,47 +54,66 @@ async function selectLanguage() {
 </script>
 
 <template>
-  <div class="Language">
-    <label for="language-select">选择语言</label>
-    <div class="selector-wrapper">
-      <Selector
-        v-model="selectedLanguage"
-        :items="
-          languages.map((lang) => {
-            return { value: lang.code, label: lang.name };
-          })
-        "
-        placeholder="选择语言"
-        @change="selectLanguage"
-      />
+  <div class="LanguageBox">
+    <div class="setting-row">
+      <span class="row-label">界面语言</span>
+      <div class="selector-wrapper">
+        <Selector
+          v-model="selectedLanguage"
+          :items="
+            languages.map((lang) => {
+              return { value: lang.code, label: lang.name };
+            })
+          "
+          placeholder="选择语言"
+          @change="selectLanguage"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.Language {
-  width: 100%;
-  height: 100%;
+.LanguageBox {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
-  gap: 50px;
+  gap: 16px;
 
-  label {
-    font-weight: bold;
-    font-size: 28px;
-    color: var(--text-color);
+  .setting-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+
+    .row-label {
+      min-width: 100px;
+      padding-top: 10px;
+      font-size: 14px;
+      color: var(--text-color-1);
+      flex-shrink: 0;
+    }
   }
 
   .selector-wrapper {
-    width: 300px;
+    width: 280px;
+    padding-top: 4px;
   }
+}
 
-  p {
-    margin-top: 10px;
-    font-size: 14px;
-    color: var(--text-color-2);
+@media (max-width: 768px) {
+  .LanguageBox {
+    .setting-row {
+      flex-direction: column;
+      gap: 8px;
+
+      .row-label {
+        min-width: auto;
+        padding-top: 0;
+      }
+    }
+
+    .selector-wrapper {
+      width: 100%;
+    }
   }
 }
 </style>
