@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
-import { isFileSidebarVisible, isOutlineSidebarVisible, toggleSidebar } from "@/hooks/useOutline";
 import useSourceCode from "@/hooks/useSourceCode";
 import useTab from "@/hooks/useTab";
 import { checkMarkdownSyntax } from "@/utils/markdownSyntaxCheck";
@@ -90,22 +89,6 @@ onUnmounted(() => window.removeEventListener("keydown", onToggleSourceKeydown));
   <div class="StatusBarBox">
     <div class="left-section">
       <div>
-        <span
-          class="status-icon-btn sidebar-toggle-btn"
-          :class="{ active: isFileSidebarVisible }"
-          title="切换左侧文件栏"
-          @click="toggleSidebar('file')"
-        >
-          <span class="sidebar-toggle-glyph left"></span>
-        </span>
-        <span
-          class="status-icon-btn sidebar-toggle-btn"
-          :class="{ active: isOutlineSidebarVisible }"
-          title="切换右侧大纲栏"
-          @click="toggleSidebar('outline')"
-        >
-          <span class="sidebar-toggle-glyph right"></span>
-        </span>
         <span class="status-icon-btn" @click.stop="toggleSourceCode()">
           <AppIcon :name="isShowSource ? 'input' : 'markdown'" />
         </span>
@@ -205,43 +188,6 @@ onUnmounted(() => window.removeEventListener("keydown", onToggleSourceKeydown));
 
     &:hover {
       background: var(--hover-color);
-    }
-  }
-
-  .sidebar-toggle-btn {
-    line-height: 1;
-    color: var(--text-color-3);
-
-    &.active {
-      color: color-mix(in srgb, var(--active-color) 86%, white 14%);
-    }
-
-    .sidebar-toggle-glyph {
-      position: relative;
-      display: inline-block;
-      width: 14px;
-      height: 12px;
-      border: 1.5px solid currentColor;
-      border-radius: 3px;
-      box-sizing: border-box;
-
-      &::before {
-        content: "";
-        position: absolute;
-        top: 1px;
-        bottom: 1px;
-        width: 3px;
-        border-radius: 1px;
-        background: currentColor;
-      }
-
-      &.left::before {
-        left: 1px;
-      }
-
-      &.right::before {
-        right: 1px;
-      }
     }
   }
 }
