@@ -303,7 +303,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="tabContainerRef" class="tabBarContarner" :style="tabContainerStyle">
+  <div
+    ref="tabContainerRef"
+    class="tabBarContarner"
+    :style="tabContainerStyle"
+    data-tauri-drag-region
+  >
     <TransitionGroup
       v-draggable="[
         formattedTabs,
@@ -324,6 +329,7 @@ onUnmounted(() => {
       class="tabBar"
       mode="out-in"
       tag="div"
+      data-tauri-drag-region
       @before-leave="handleBeforeLeave"
     >
       <div
@@ -378,7 +384,7 @@ onUnmounted(() => {
   padding: 0 10px;
   flex-direction: column;
   justify-content: flex-end;
-  overflow-x: scroll;
+  overflow-x: hidden;
   overflow-y: hidden;
   transition: margin-left 0.6s 0.02s cubic-bezier(0.035, 0.63, 0, 1); //一个延迟能变得高级，你就学吧
 
@@ -389,6 +395,8 @@ onUnmounted(() => {
   .tabBar {
     display: flex;
     justify-content: flex-start;
+    align-self: stretch;
+    width: 100%;
     // gap: 15px;
     height: 30px;
     position: relative;
@@ -397,9 +405,8 @@ onUnmounted(() => {
       position: relative;
       -webkit-app-region: no-drag;
       max-width: 200px;
-      min-width: 150px;
-      width: 150px; // 固定宽度，确保滚动效果
-      flex-shrink: 0; // 防止收缩
+      min-width: 40px; // 文件过多时允许挤压到最小宽度
+      flex: 0 1 150px; // 基础 150px，空间不足时收缩挤压，充足时不拉伸
       background: var(--background-color-1);
       // border: 1px solid var(--border-color-1);
       display: flex;
@@ -457,8 +464,11 @@ onUnmounted(() => {
         gap: 6px;
 
         .tab-name {
-          flex-shrink: 0;
+          flex-shrink: 1;
           min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
           color: inherit;
         }
 
