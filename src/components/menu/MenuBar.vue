@@ -21,6 +21,9 @@ const menuComponents: Record<MenuTab, Component> = {
   shortcut: ShortcutPage,
 };
 const activeComponent = computed(() => menuComponents[activeTab.value]);
+const emit = defineEmits<{
+  (event: "exit-preferences"): void;
+}>();
 
 const menuOptions: Array<{
   label: string;
@@ -50,9 +53,8 @@ const menuOptions: Array<{
   { label: "关于", action: () => (activeTab.value = "about"), icon: "github", value: "about" },
 ];
 
-// 退出首选项面板：复用全局 Escape 关闭逻辑（见 MenuDropDown 的 handleKeydown）
 function exitPreferences() {
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  emit("exit-preferences");
 }
 
 onMounted(() => {

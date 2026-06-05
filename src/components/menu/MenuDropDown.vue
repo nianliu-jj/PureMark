@@ -71,6 +71,10 @@ function closeMenu() {
   isMenuOpen.value = false;
 }
 
+function closePreferences() {
+  isPreferencesOpen.value = false;
+}
+
 function updateMenuPosition() {
   const trigger = triggerRef.value;
   if (!trigger) return;
@@ -87,6 +91,8 @@ function updateMenuPosition() {
 }
 
 async function toggleMenu() {
+  if (isPreferencesOpen.value) return;
+
   isMenuOpen.value = !isMenuOpen.value;
   if (isMenuOpen.value) {
     isPreferencesOpen.value = false;
@@ -230,12 +236,16 @@ function handleFileChange() {
 function handleDocumentPointerDown(event: PointerEvent) {
   const root = rootRef.value;
   if (!root || root.contains(event.target as Node)) return;
+  if (isPreferencesOpen.value) {
+    closeMenu();
+    return;
+  }
   closeAll();
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === "Escape") {
-    closeAll();
+    closeMenu();
     return;
   }
 
@@ -318,7 +328,7 @@ onUnmounted(() => {
       :class="{ open: isPreferencesOpen }"
       :aria-hidden="!isPreferencesOpen"
     >
-      <MenuBar />
+      <MenuBar @exit-preferences="closePreferences" />
     </div>
   </div>
 </template>
@@ -455,7 +465,9 @@ onUnmounted(() => {
     left: 0;
     z-index: 999;
     background: var(--background-color-1);
+    border-radius: 0 0 10px 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    overflow: hidden;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
