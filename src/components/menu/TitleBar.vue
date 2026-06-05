@@ -84,7 +84,7 @@ function toggleOutlineSidebar() {
 </script>
 
 <template>
-  <div class="TitleBarBox">
+  <div class="TitleBarBox" data-tauri-drag-region>
     <template v-if="isWin">
       <TabBar />
 
@@ -124,7 +124,52 @@ function toggleOutlineSidebar() {
       </div>
     </template>
     <template v-else>
-      <div class="leading-space"></div>
+      <div class="traffic-lights">
+        <button class="traffic-light close" title="关闭" aria-label="关闭" @click="onClose">
+          <svg viewBox="0 0 12 12" class="traffic-glyph">
+            <path
+              d="M3 3 L9 9 M9 3 L3 9"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+        <button
+          class="traffic-light minimize"
+          title="最小化"
+          aria-label="最小化"
+          @click="onMinimize"
+        >
+          <svg viewBox="0 0 12 12" class="traffic-glyph">
+            <path d="M2.5 6 H9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button
+          class="traffic-light maximize"
+          title="最大化"
+          aria-label="最大化"
+          @click="onMaximizeToggle"
+        >
+          <svg viewBox="0 0 12 12" class="traffic-glyph">
+            <path
+              v-if="!isFullScreen"
+              d="M3 5 L3 3 L5 3 M7 3 L9 3 L9 5 M9 7 L9 9 L7 9 M5 9 L3 9 L3 7"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+            <path
+              v-else
+              d="M3.5 6 H8.5 M6 3.5 V8.5"
+              stroke="currentColor"
+              stroke-width="1.2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
       <TabBar />
       <div class="sidebar-toggle-group">
         <button class="title-bar-add" title="新建标签页" @click="onCreateFile">
@@ -169,6 +214,50 @@ function toggleOutlineSidebar() {
   .leading-space {
     width: 68px;
     flex-shrink: 0;
+  }
+
+  .traffic-lights {
+    -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    flex-shrink: 0;
+    height: 100%;
+
+    .traffic-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 0.5px solid rgba(0, 0, 0, 0.18);
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: transparent;
+      transition: color 0.12s ease;
+
+      &.close {
+        background: #ff5f57;
+      }
+      &.minimize {
+        background: #febc2e;
+      }
+      &.maximize {
+        background: #28c840;
+      }
+
+      .traffic-glyph {
+        width: 8px;
+        height: 8px;
+        display: block;
+      }
+    }
+
+    &:hover .traffic-light {
+      color: rgba(0, 0, 0, 0.55);
+    }
   }
 
   .menu-anchor {

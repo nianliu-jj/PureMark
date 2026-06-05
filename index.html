@@ -52,9 +52,10 @@
             }
           } catch (e) {}
         }
-        document.documentElement.style.background = bg || "#ffffff";
         document.documentElement.style.setProperty("--primary-color", primary || "#5e81ac");
         document.documentElement.classList.add("theme-" + theme);
+        var appRoot = document.getElementById("app");
+        if (appRoot) appRoot.style.background = bg || "#ffffff";
       })();
     </script>
   </head>

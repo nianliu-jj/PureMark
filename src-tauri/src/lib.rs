@@ -165,12 +165,6 @@ pub fn run() -> anyhow::Result<()> {
             // 永远不会命中主窗口，Tab 合并 / 跨窗口文件去重对主窗口失效。
             window_manager::track_window(window_manager::MAIN_LABEL);
             if let Some(main_win) = app.get_webview_window(window_manager::MAIN_LABEL) {
-                #[cfg(target_os = "macos")]
-                {
-                    let _ = main_win.set_decorations(true);
-                    let _ = main_win.set_title_bar_style(tauri::TitleBarStyle::Overlay);
-                }
-
                 main_win.on_window_event(|event| {
                     if matches!(event, tauri::WindowEvent::Destroyed) {
                         window_manager::untrack_window(window_manager::MAIN_LABEL);

@@ -56,16 +56,10 @@ pub async fn create_editor_window(
         .inner_size(width, height)
         .min_inner_size(800.0, 600.0)
         .resizable(true)
-        .visible(false);
-
-    #[cfg(target_os = "macos")]
-    let builder = builder
-        .decorations(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .hidden_title(true);
-
-    #[cfg(not(target_os = "macos"))]
-    let builder = builder.decorations(false).shadow(true);
+        .visible(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(true);
 
     let window = builder
         .build()

@@ -120,6 +120,8 @@ pub async fn open_theme_editor(app: AppHandle) -> AppResult<()> {
         .inner_size(1000.0, 700.0)
         .min_inner_size(800.0, 600.0)
         .decorations(false)
+        .transparent(true)
+        .shadow(true)
         .resizable(true)
         .center();
 
