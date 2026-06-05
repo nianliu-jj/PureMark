@@ -6,6 +6,7 @@ const supportedThemes = [
   "crepe-dark",
   "frame",
   "frame-dark",
+  "glass",
 ] as const;
 
 export type ThemeName = (typeof supportedThemes)[number] | string;

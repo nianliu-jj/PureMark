@@ -23,6 +23,10 @@ export const themeNameMap: Record<string, { label: string; description: string }
     label: "暖色",
     description: "暖色风格主题，适合长时间阅读",
   },
+  glass: {
+    label: "玻璃拟物化",
+    description: "透明底色与淡紫色调的玻璃拟物化主题",
+  },
 };
 
 export const cssVarsDesMap: {
@@ -52,6 +56,7 @@ export const cssVarsDesMap: {
     "--selected-color": "选中色",
     "--selected-background-color": "选中背景色",
     "--primary-color-transparent": "主色透明",
+    "--theme-preview-background": "主题预览背景",
   },
 
   // 编辑器css变量

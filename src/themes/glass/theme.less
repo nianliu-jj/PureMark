@@ -1,0 +1,64 @@
+/* 玻璃拟物化主题 */
+html.theme-glass {
+  --primary-color: #9d8cf0;
+  --secondary-color: #6ed4c0;
+  --background-color: #11132b;
+  --background-color-1: rgba(255, 255, 255, 0.1);
+  --background-color-2: rgba(200, 190, 240, 0.12);
+  --background-color-3: rgba(180, 170, 220, 0.24);
+  --background-color-code: rgba(14, 16, 39, 0.72);
+  --text-color: #eae9f7;
+  --text-color-1: #f3f1ff;
+  --text-color-2: #c4c1d8;
+  --text-color-3: #9d98ba;
+  --placeholder-color: #8d87ad;
+  --border-color: rgba(180, 170, 220, 0.24);
+  --border-color-1: rgba(180, 170, 220, 0.18);
+  --border-color-2: rgba(180, 170, 220, 0.12);
+  --hover-color: rgba(157, 140, 240, 0.16);
+  --hover-background-color: rgba(255, 255, 255, 0.08);
+  --active-color: rgba(157, 140, 240, 0.28);
+  --active-line-color: rgba(157, 140, 240, 0.24);
+  --selected-color: rgba(243, 241, 255, 0.88);
+  --selected-background-color: rgba(157, 140, 240, 0.28);
+  --primary-color-transparent: rgba(157, 140, 240, 0.32);
+  --theme-preview-background: linear-gradient(135deg, #3d3568, #252040);
+
+  #app,
+  #theme-editor-app {
+    background:
+      radial-gradient(760px 520px at 50% 0%, rgba(140, 110, 210, 0.16), transparent 68%),
+      linear-gradient(145deg, #1b1d3d 0%, #11132b 52%, #0d1028 100%);
+  }
+
+  ::selection {
+    background: rgba(157, 140, 240, 0.32);
+  }
+
+  .puredown {
+    --crepe-color-background: #11132b;
+    --crepe-color-on-background: #eae9f7;
+    --crepe-color-surface: rgba(255, 255, 255, 0.12);
+    --crepe-color-surface-low: rgba(200, 190, 240, 0.12);
+    --crepe-color-on-surface: #f3f1ff;
+    --crepe-color-on-surface-variant: #c4c1d8;
+    --crepe-color-outline: rgba(180, 170, 220, 0.28);
+    --crepe-color-primary: #9d8cf0;
+    --crepe-color-secondary: rgba(200, 190, 240, 0.16);
+    --crepe-color-on-secondary: #f3f1ff;
+    --crepe-color-inverse: #f3f1ff;
+    --crepe-color-on-inverse: #11132b;
+    --crepe-color-inline-code: #f0b78f;
+    --crepe-color-error: #f0828c;
+    --crepe-color-hover: rgba(255, 255, 255, 0.08);
+    --crepe-color-selected: rgba(157, 140, 240, 0.28);
+    --crepe-color-inline-area: rgba(14, 16, 39, 0.72);
+
+    --crepe-font-title: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --crepe-shadow-1:
+      0px 12px 32px rgba(4, 6, 20, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --crepe-shadow-2:
+      0px 16px 44px rgba(4, 6, 20, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+}
