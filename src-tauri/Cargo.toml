@@ -1,6 +1,6 @@
 [package]
 name = "puremark"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Markdown editor built with Tauri and Vue 3"
 authors = ["NianLiu"]
 license = "MIT"

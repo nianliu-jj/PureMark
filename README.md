@@ -1,6 +1,6 @@
 <div align="center">
   <img src="./public/logo.svg" alt="PureMark Logo" width="150">
-  <h1>PureMark</h1>
+  <h1>PureMark · 简墨</h1>
   <p><strong>基于 Tauri + Vue 3 + 自研 ProseMirror 内核的跨平台 Markdown 编辑器</strong></p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -27,11 +27,11 @@
 - HTML / PDF / Word 导出
 - Windows、macOS、Linux 跨平台支持
 
-## 演示图片
+## 演示截图
 
-![alt text](./assets/1.png)
+![演示截图 1](./assets/1.png)
 
-![alt text](./assets/2.png)
+![演示截图 2](./assets/2.png)
 
 ## 开发环境
 
@@ -99,3 +99,22 @@ pnpm run format
 - 说明修改目标和影响范围
 - 标明是否做过手工验证，以及验证范围
 - 如果涉及 UI 或交互变化，尽量附上截图或录屏
+
+## 支持作者
+
+如果这个项目对你有帮助，欢迎请作者喝杯咖啡 ☕
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="./images/weichat.jpg" alt="微信赞赏码" width="200"><br>
+        <sub>微信</sub>
+      </td>
+      <td align="center">
+        <img src="./images/zhifubao.jpg" alt="支付宝收款码" width="200"><br>
+        <sub>支付宝</sub>
+      </td>
+    </tr>
+  </table>
+</div>
