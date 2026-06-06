@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RecentOpenItem, StartupMode } from "@/services/launchState";
+import type { ImageExportFormat } from "@/shared/types/export";
 import autotoast from "autotoast.js";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
@@ -18,6 +19,7 @@ import {
 } from "@/services/launchState";
 import {
   exportAsText,
+  exportElementAsImage,
   exportElementAsPDF,
   exportElementWithStylesAndImages,
   exportMarkdownAsWord,
@@ -70,6 +72,21 @@ const startupOptions: Array<{
     icon: "folder-opened",
   },
 ];
+
+const imageFormatOptions: Array<{ value: ImageExportFormat; label: string }> = [
+  { value: "png", label: "PNG" },
+  { value: "jpg", label: "JPG" },
+  { value: "webp", label: "WebP" },
+];
+
+const imageFormat = computed<ImageExportFormat>(() => config.value.export?.imageFormat ?? "png");
+
+function setImageFormat(format: ImageExportFormat) {
+  config.value = {
+    ...config.value,
+    export: { ...config.value.export, imageFormat: format },
+  };
+}
 
 function formatRecentTimestamp(timestamp: number): string {
   if (!Number.isFinite(timestamp)) {
@@ -241,6 +258,18 @@ function exportAsDocx() {
 
 function exportAsTxt() {
   exportAsText(markdown.value, `${getExportBaseName()}.txt`);
+}
+
+function exportAsImage() {
+  exportElementAsImage(getActiveEditorSelector(), getExportBaseName(), {
+    format: imageFormat.value,
+  })
+    .then(() => {
+      autotoast.show("导出成功", "success");
+    })
+    .catch((err) => {
+      autotoast.show(`导出失败: ${err.message}`, "error");
+    });
 }
 
 let stopListenLaunchState: (() => void) | null = null;
@@ -428,6 +457,24 @@ onUnmounted(() => {
           <AppIcon name="document" />
           <span>TXT</span>
         </button>
+        <button @click="exportAsImage">
+          <AppIcon name="image" />
+          <span>长图</span>
+        </button>
+      </div>
+      <div class="image-format-row">
+        <label class="image-format-label">图片格式</label>
+        <div class="mode-select">
+          <span
+            v-for="opt in imageFormatOptions"
+            :key="opt.value"
+            class="mode-option"
+            :class="{ active: imageFormat === opt.value }"
+            @click="setImageFormat(opt.value)"
+          >
+            {{ opt.label }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -517,6 +564,47 @@ onUnmounted(() => {
         button {
           justify-content: flex-start;
           width: max-content;
+        }
+      }
+
+      .image-format-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+        padding-left: 50px;
+
+        .image-format-label {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--text-color-3);
+        }
+
+        .mode-select {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+
+          .mode-option {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid var(--border-color-1);
+            color: var(--text-color-3);
+            transition: all 0.2s ease;
+
+            &:hover {
+              border-color: var(--border-color-2);
+              background: var(--background-color-3);
+            }
+
+            &.active {
+              background: var(--primary-color, #4a9eff);
+              color: #fff;
+              border-color: var(--primary-color, #4a9eff);
+            }
+          }
         }
       }
     }
