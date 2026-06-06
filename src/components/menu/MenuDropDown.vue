@@ -74,6 +74,8 @@ const menuPosition = ref({ top: 40, left: 8 });
 const activeSubmenuIndex = ref<number | null>(null);
 const submenuPosition = ref({ top: 0, left: 0 });
 const SUBMENU_WIDTH = 200;
+// 子菜单与父项左右衔接处的重叠像素，消除两者之间的 1px 缝隙，避免鼠标经过时误触发关闭
+const SUBMENU_OVERLAP = 2;
 let submenuCloseTimer: number | null = null;
 const logoSvg = `${import.meta.env.BASE_URL}logo.svg`;
 const COMMAND_MENU_WIDTH = 280;
@@ -138,8 +140,8 @@ function openSubmenu(index: number, event: MouseEvent) {
   const spaceRight = window.innerWidth - rect.right;
   const flipLeft = spaceRight < SUBMENU_WIDTH + VIEWPORT_PADDING;
   const left = flipLeft
-    ? trigger.offsetLeft - SUBMENU_WIDTH + 2
-    : trigger.offsetLeft + trigger.offsetWidth - 2;
+    ? trigger.offsetLeft - SUBMENU_WIDTH + SUBMENU_OVERLAP
+    : trigger.offsetLeft + trigger.offsetWidth - SUBMENU_OVERLAP;
   submenuPosition.value = { top: trigger.offsetTop, left };
 }
 
