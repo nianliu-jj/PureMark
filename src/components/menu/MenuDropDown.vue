@@ -129,13 +129,18 @@ function scheduleCloseSubmenu() {
 function openSubmenu(index: number, event: MouseEvent) {
   cancelCloseSubmenu();
   activeSubmenuIndex.value = index;
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const trigger = event.currentTarget as HTMLElement;
+  const rect = trigger.getBoundingClientRect();
+  // .command-submenu 为 position:fixed，但其包含块是带 transform 的父级 .command-menu，
+  // 因此用相对该包含块（trigger.offsetParent === .command-menu）的 offset 坐标，
+  // 而非视口坐标，否则子菜单会整体偏移 .command-menu 的位置。
+  // 用视口剩余空间判断左右翻转：右侧空间不足则改向左侧弹出。
   const spaceRight = window.innerWidth - rect.right;
-  // 默认右侧弹出，与父项略微重叠避免缝隙；右侧空间不足则改向左侧
-  let left =
-    spaceRight < SUBMENU_WIDTH + VIEWPORT_PADDING ? rect.left - SUBMENU_WIDTH + 2 : rect.right - 2;
-  left = Math.max(VIEWPORT_PADDING, left);
-  submenuPosition.value = { top: rect.top, left };
+  const flipLeft = spaceRight < SUBMENU_WIDTH + VIEWPORT_PADDING;
+  const left = flipLeft
+    ? trigger.offsetLeft - SUBMENU_WIDTH + 2
+    : trigger.offsetLeft + trigger.offsetWidth - 2;
+  submenuPosition.value = { top: trigger.offsetTop, left };
 }
 
 function closeSubmenuImmediately() {
