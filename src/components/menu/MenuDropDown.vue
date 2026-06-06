@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import autotoast from "autotoast.js";
-import { nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import emitter from "@/events";
 import useContent from "@/hooks/useContent";
+import { useConfig } from "@/hooks/useConfig";
 import useFile from "@/hooks/useFile";
 import useTab from "@/hooks/useTab";
 import useWorkSpace from "@/hooks/useWorkSpace";
@@ -14,6 +15,7 @@ import {
   showOpenDialog,
 } from "@/services/api";
 import {
+  exportElementAsImage,
   exportElementAsPDF,
   exportElementWithStylesAndImages,
   exportMarkdownAsWord,
@@ -22,7 +24,7 @@ import {
 } from "@/utils/exports";
 import MenuBar from "./MenuBar.vue";
 
-type MenuItem =
+type MenuLeaf =
   | {
       type: "item";
       label: string;
@@ -33,6 +35,15 @@ type MenuItem =
     }
   | { type: "separator" };
 
+type MenuItem =
+  | MenuLeaf
+  | {
+      type: "submenu";
+      label: string;
+      icon: MenuIconName;
+      children: MenuLeaf[];
+    };
+
 type MenuIconName =
   | "config-props"
   | "document"
@@ -42,6 +53,7 @@ type MenuIconName =
   | "folder-copy"
   | "folder-opened"
   | "html"
+  | "image"
   | "input"
   | "link"
   | "pdf"
@@ -52,12 +64,17 @@ const { createNewFile, onOpen, onSave, onSaveAs, currentTab } = useFile();
 const { updateCurrentTabFile } = useTab();
 const { setWorkSpace, refreshWorkSpace } = useWorkSpace();
 const { markdown, filePath } = useContent();
+const { config } = useConfig();
 
 const isMenuOpen = ref(false);
 const isPreferencesOpen = ref(false);
 const rootRef = ref<HTMLElement | null>(null);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const menuPosition = ref({ top: 40, left: 8 });
+const activeSubmenuIndex = ref<number | null>(null);
+const submenuPosition = ref({ top: 0, left: 0 });
+const SUBMENU_WIDTH = 200;
+let submenuCloseTimer: number | null = null;
 const logoSvg = `${import.meta.env.BASE_URL}logo.svg`;
 const COMMAND_MENU_WIDTH = 280;
 const VIEWPORT_PADDING = 8;
@@ -65,10 +82,14 @@ const VIEWPORT_PADDING = 8;
 function closeAll() {
   isMenuOpen.value = false;
   isPreferencesOpen.value = false;
+  cancelCloseSubmenu();
+  activeSubmenuIndex.value = null;
 }
 
 function closeMenu() {
   isMenuOpen.value = false;
+  cancelCloseSubmenu();
+  activeSubmenuIndex.value = null;
 }
 
 function closePreferences() {
@@ -90,6 +111,38 @@ function updateMenuPosition() {
   };
 }
 
+function cancelCloseSubmenu() {
+  if (submenuCloseTimer !== null) {
+    window.clearTimeout(submenuCloseTimer);
+    submenuCloseTimer = null;
+  }
+}
+
+function scheduleCloseSubmenu() {
+  cancelCloseSubmenu();
+  submenuCloseTimer = window.setTimeout(() => {
+    activeSubmenuIndex.value = null;
+    submenuCloseTimer = null;
+  }, 150);
+}
+
+function openSubmenu(index: number, event: MouseEvent) {
+  cancelCloseSubmenu();
+  activeSubmenuIndex.value = index;
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const spaceRight = window.innerWidth - rect.right;
+  // 默认右侧弹出，与父项略微重叠避免缝隙；右侧空间不足则改向左侧
+  let left =
+    spaceRight < SUBMENU_WIDTH + VIEWPORT_PADDING ? rect.left - SUBMENU_WIDTH + 2 : rect.right - 2;
+  left = Math.max(VIEWPORT_PADDING, left);
+  submenuPosition.value = { top: rect.top, left };
+}
+
+function closeSubmenuImmediately() {
+  cancelCloseSubmenu();
+  activeSubmenuIndex.value = null;
+}
+
 async function toggleMenu() {
   if (isPreferencesOpen.value) return;
 
@@ -98,6 +151,8 @@ async function toggleMenu() {
     isPreferencesOpen.value = false;
     await nextTick();
     updateMenuPosition();
+  } else {
+    closeSubmenuImmediately();
   }
 }
 
@@ -179,6 +234,12 @@ async function exportAsWord() {
   autotoast.show("导出成功", "success");
 }
 
+async function exportAsImage() {
+  const format = config.value.export?.imageFormat ?? "png";
+  await exportElementAsImage(getActiveEditorSelector(), getExportBaseName(), { format });
+  autotoast.show("导出成功", "success");
+}
+
 function printCurrentFile() {
   window.print();
 }
@@ -214,9 +275,17 @@ const menuItems: MenuItem[] = [
   { type: "item", label: "打开文件位置", icon: "link", action: revealCurrentFile },
   { type: "separator" },
   { type: "item", label: "导入", icon: "input", action: () => onOpen() },
-  { type: "item", label: "导出 HTML", icon: "html", action: exportAsHTML },
-  { type: "item", label: "导出 PDF", icon: "pdf", action: exportAsPDF },
-  { type: "item", label: "导出 Word", icon: "word-file", action: exportAsWord },
+  {
+    type: "submenu",
+    label: "导出",
+    icon: "export-file",
+    children: [
+      { type: "item", label: "导出 HTML", icon: "html", action: exportAsHTML },
+      { type: "item", label: "导出 PDF", icon: "pdf", action: exportAsPDF },
+      { type: "item", label: "导出 Word", icon: "word-file", action: exportAsWord },
+      { type: "item", label: "导出为图片", icon: "image", action: exportAsImage },
+    ],
+  },
   { type: "separator" },
   { type: "item", label: "打印", icon: "document", shortcut: "Ctrl+P", action: printCurrentFile },
   { type: "separator" },
@@ -228,6 +297,12 @@ const menuItems: MenuItem[] = [
     action: openPreferences,
   },
 ];
+
+const submenuChildren = computed<MenuLeaf[]>(() => {
+  if (activeSubmenuIndex.value === null) return [];
+  const item = menuItems[activeSubmenuIndex.value];
+  return item && item.type === "submenu" ? item.children : [];
+});
 
 function handleFileChange() {
   closeMenu();
@@ -285,6 +360,7 @@ onUnmounted(() => {
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
   document.removeEventListener("keydown", handleKeydown);
   window.removeEventListener("resize", updateMenuPosition);
+  cancelCloseSubmenu();
 });
 </script>
 
@@ -309,9 +385,24 @@ onUnmounted(() => {
       <template v-for="(item, index) in menuItems" :key="index">
         <div v-if="item.type === 'separator'" class="menu-separator"></div>
         <button
+          v-else-if="item.type === 'submenu'"
+          class="command-menu-item has-submenu"
+          :class="{ active: activeSubmenuIndex === index }"
+          @mouseenter="openSubmenu(index, $event)"
+          @mouseleave="scheduleCloseSubmenu"
+          @click="openSubmenu(index, $event)"
+        >
+          <span class="item-main">
+            <AppIcon :name="item.icon" class="item-icon" />
+            <span>{{ item.label }}</span>
+          </span>
+          <AppIcon name="arrow-right" class="submenu-arrow" />
+        </button>
+        <button
           v-else
           class="command-menu-item"
           :disabled="item.disabled?.()"
+          @mouseenter="closeSubmenuImmediately"
           @click="runAction(item.action)"
         >
           <span class="item-main">
@@ -321,6 +412,29 @@ onUnmounted(() => {
           <span v-if="item.shortcut" class="item-shortcut">{{ item.shortcut }}</span>
         </button>
       </template>
+
+      <div
+        v-if="activeSubmenuIndex !== null"
+        class="command-submenu"
+        :style="{ top: `${submenuPosition.top}px`, left: `${submenuPosition.left}px` }"
+        @mouseenter="cancelCloseSubmenu"
+        @mouseleave="scheduleCloseSubmenu"
+      >
+        <template v-for="(child, ci) in submenuChildren" :key="ci">
+          <div v-if="child.type === 'separator'" class="menu-separator"></div>
+          <button
+            v-else
+            class="command-menu-item"
+            :disabled="child.disabled?.()"
+            @click="runAction(child.action)"
+          >
+            <span class="item-main">
+              <AppIcon :name="child.icon" class="item-icon" />
+              <span>{{ child.label }}</span>
+            </span>
+          </button>
+        </template>
+      </div>
     </div>
 
     <div
@@ -449,6 +563,30 @@ onUnmounted(() => {
       text-align: right;
       flex-shrink: 0;
     }
+  }
+
+  .command-menu-item.has-submenu {
+    &.active {
+      background: var(--hover-color);
+    }
+
+    .submenu-arrow {
+      margin-left: auto;
+      flex-shrink: 0;
+      font-size: 14px;
+      color: var(--text-color-3);
+    }
+  }
+
+  .command-submenu {
+    position: fixed;
+    z-index: 1001;
+    width: 200px;
+    padding: 6px;
+    border: 1px solid var(--border-color-1);
+    border-radius: 8px;
+    background: var(--background-color-1);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   }
 
   .menu-separator {
