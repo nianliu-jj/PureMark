@@ -1,6 +1,7 @@
 import { exportAsWord as doExportWord } from "@/services/exports/docx";
 import { exportAsPDF as doExportPDF } from "@/services/exports/pdf";
-import type { DocxBlock, ExportPDFOptions } from "@/shared/types/export";
+import { exportAsImage as doExportImage } from "@/services/exports/image";
+import type { DocxBlock, ExportImageOptions, ExportPDFOptions } from "@/shared/types/export";
 
 type Block = DocxBlock;
 
@@ -165,6 +166,15 @@ export async function exportElementAsPDF(
     outputName,
     options as import("@/shared/types/export").ExportPDFOptions | undefined
   );
+}
+
+// 导出为长图片
+export async function exportElementAsImage(
+  elementSelector: string,
+  fileBaseName: string,
+  options: ExportImageOptions
+): Promise<void> {
+  await doExportImage(elementSelector, fileBaseName, options);
 }
 // 导出为 Word
 
