@@ -113,7 +113,7 @@ function closeMenuPanel() {
 }
 
 function getExportBaseName() {
-  return currentTab.value?.name?.slice(0, -3) || "导出的文件";
+  return currentTab.value?.name?.replace(/\.(md|markdown)$/i, "") || "导出的文件";
 }
 
 function getStartupMeta(mode: StartupMode): string {
