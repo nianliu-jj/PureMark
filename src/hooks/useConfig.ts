@@ -6,6 +6,7 @@ import { readonly, watch } from "vue";
 import { defaultFontConfig, defaultFontSizeConfig } from "@/config/fonts";
 import type { StartupMode } from "@/services/launchState";
 import type { DefaultLineEndingMode } from "@/utils/lineEnding";
+import type { ImageExportFormat } from "@/shared/types/export";
 import type { UploadConfig } from "@/utils/uploadConfig";
 import { setNestedProperty } from "@/utils/tool";
 import { migrateStorageValue } from "@/shared/utils/storage";
@@ -36,6 +37,9 @@ interface AppConfig extends Record<string, any> {
   };
   mermaid: {
     defaultDisplayMode: "code" | "mixed" | "diagram";
+  };
+  export: {
+    imageFormat: ImageExportFormat;
   };
   shortcuts: ShortcutKeyMap;
   workspace: {
@@ -70,6 +74,9 @@ const defaultConfig: AppConfig = {
   },
   mermaid: {
     defaultDisplayMode: "diagram",
+  },
+  export: {
+    imageFormat: "png",
   },
   shortcuts: {},
   workspace: {
@@ -126,6 +133,10 @@ function mergeAppConfig(partial?: Partial<AppConfig>): AppConfig {
     mermaid: {
       ...defaultConfig.mermaid,
       ...partial?.mermaid,
+    },
+    export: {
+      ...defaultConfig.export,
+      ...partial?.export,
     },
     shortcuts: partial?.shortcuts || defaultConfig.shortcuts,
     workspace: {

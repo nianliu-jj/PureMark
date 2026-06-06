@@ -41,3 +41,17 @@ export interface SaveFileResult {
   filePath: string;
   content: string;
 }
+
+/**
+ * 长图导出支持的图片格式。默认 png，可在设置页切换。
+ */
+export type ImageExportFormat = "png" | "jpg" | "webp";
+
+/**
+ * 图片导出选项。由前端 services/exports/image.ts 使用。
+ */
+export interface ExportImageOptions {
+  format: ImageExportFormat;
+  /** 栅格化倍率，默认 2 保证清晰度 */
+  scale?: number;
+}
