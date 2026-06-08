@@ -1,17 +1,35 @@
 <script setup lang="ts">
+/**
+ * ReloadConfirmDialog.vue —— 重启确认对话框
+ *
+ * 职责：
+ * - 在需要重启应用才能生效的场景（如切换语言设置）弹出，提示用户先保存工作。
+ * - 提供三种选择：取消、稍后手动重启、全部保存并立即重启。
+ *
+ * 通过 props 回调与宿主通信（非 emits）：
+ * - onClose(action)：用户点击底部按钮时调用，action 表示选择的操作。
+ * - onMaskClick：点击遮罩层时的回调（由外层 overlay 触发）。
+ *
+ * UI 位置：模态对话框，覆盖在编辑器之上。
+ */
 const props = defineProps<{
+  /** 关闭对话框并回传用户选择的动作 */
   onClose: (action: "cancel" | "saveAndReload" | "reloadLater") => void;
+  /** 点击遮罩层时触发 */
   onMaskClick: () => void;
 }>();
 
+/** 取消：不重启也不保存 */
 function handleCancel() {
   props.onClose("cancel");
 }
 
+/** 全部保存并立即重启 */
 function handleSaveAndReload() {
   props.onClose("saveAndReload");
 }
 
+/** 稍后由用户手动重启 */
 function handleReloadLater() {
   props.onClose("reloadLater");
 }

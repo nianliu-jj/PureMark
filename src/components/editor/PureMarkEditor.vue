@@ -3,6 +3,15 @@
  * PureMark 编辑器 Vue 组件
  * 基于自研 ProseMirror 内核的即时渲染 Markdown 编辑器
  * 仅为当前活动 tab 挂载编辑器实例，避免多文件同时持有完整 ProseMirror 状态。
+ *
+ * 主要 props：
+ * - tab：当前编辑器绑定的标签页对象（内容、光标、滚动、只读状态等）。
+ * - isActive：是否为当前激活标签，仅激活实例响应全局事件（大纲、源码切换、撤销重做等）。
+ *
+ * 不通过 emits 通信，而是直接写回 tab 对象并通过全局 emitter 广播；
+ * 同时 defineExpose 暴露 getEditor/focus/getMarkdown 等命令式接口供父组件调用。
+ *
+ * UI 位置：编辑区主体（所见即所得模式），外层包裹滚动容器。
  */
 import type { Tab } from "@/types/tab";
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
@@ -24,7 +33,9 @@ import "@/core/styles/puremark.css";
 import { normalizeMarkdownForDirtyCheck } from "@/utils/markdown";
 
 interface Props {
+  /** 当前编辑器绑定的标签页 */
   tab: Tab;
+  /** 是否为激活标签 */
   isActive: boolean;
 }
 
@@ -131,6 +142,7 @@ function emitOutlineUpdate() {
   }, 150);
 }
 
+/** 创建 ProseMirror 编辑器实例：装配配置、注册 change/selectionChange 监听并恢复光标与滚动位置 */
 function createEditorInstance() {
   if (!containerRef.value) return;
 
@@ -228,6 +240,7 @@ function createEditorInstance() {
   });
 }
 
+/** 用 tab 的最新内容覆盖编辑器（来自文件 watcher、打开文件等外部更新），并恢复滚动比例 */
 function syncEditorFromTab(content: string) {
   if (!editor) return;
 

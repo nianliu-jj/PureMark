@@ -1,4 +1,21 @@
 <script setup lang="ts">
+/**
+ * UpdateConfirmDialog.vue —— 应用更新确认对话框
+ *
+ * 职责：
+ * - 展示检测到的新版本信息（版本号、更新日志）。
+ * - 根据下载状态（idle/downloading/downloaded/error）切换底部按钮与进度条展示。
+ * - 提供忽略本次更新、稍后提醒、立即更新、重启安装、最小化等操作。
+ *
+ * 主要 props：
+ * - visible：是否可见。
+ * - status：更新流程状态，驱动 UI 切换。
+ * - progress：下载进度百分比。
+ *
+ * 主要 emits：ignore / get / install / cancel / minimize，由宿主对接 Tauri 更新链路。
+ *
+ * UI 位置：全屏遮罩的模态对话框。更新日志通过 unified/remark 渲染为 HTML。
+ */
 import { nextTick, ref, watch } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import { openExternal } from "@/services/api";
@@ -8,21 +25,30 @@ import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 
 interface Props {
+  /** 是否可见 */
   visible: boolean;
+  /** 更新流程状态：空闲 / 下载中 / 已下载 / 出错 */
   status: "idle" | "downloading" | "downloaded" | "error";
+  /** 下载进度百分比 */
   progress: number;
 }
 
 interface Emits {
+  /** 忽略本次更新 */
   (e: "ignore"): void;
+  /** 开始获取/下载更新 */
   (e: "get"): void;
+  /** 重启并安装更新 */
   (e: "install"): void;
+  /** 取消/稍后提醒 */
   (e: "cancel"): void;
+  /** 下载中最小化对话框 */
   (e: "minimize"): void;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+// 更新信息由 Tauri 更新链路预先写入 localStorage，这里读取展示
 const updateInfo = ref(JSON.parse(localStorage.getItem("updateInfo") || "{}"));
 
 function handleIgnore() {
@@ -56,6 +82,7 @@ function openReleasePage() {
 
 const updateLogContainer = ref<HTMLElement | null>(null);
 
+/** 将更新日志的 Markdown 文本渲染为 HTML 字符串 */
 async function renderMarkdown(markdown: string): Promise<string> {
   const file = await unified()
     .use(remarkParse)
@@ -65,6 +92,7 @@ async function renderMarkdown(markdown: string): Promise<string> {
   return String(file);
 }
 
+// 对话框每次打开时重新读取更新信息并渲染更新日志到容器中
 watch(
   () => props.visible,
   async (newVal) => {

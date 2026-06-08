@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/**
+ * MenuDropDown.vue —— 应用主菜单（左上角 Logo 触发的下拉命令菜单）
+ *
+ * 职责：
+ * - 提供新建/打开/保存/另存为/移动/导入导出/打印/首选项等核心文件命令，
+ *   含「导出」二级悬停子菜单（HTML/PDF/Word/图片）。
+ * - 维护菜单与子菜单的开合、定位（含视口边界翻转）与全局快捷键。
+ * - 内嵌首选项面板（MenuBar），可在菜单与偏好设置之间切换。
+ *
+ * 无 props / emits，直接通过 hooks（useFile/useTab/useWorkSpace 等）与全局 emitter 协作。
+ *
+ * UI 位置：标题栏左侧的应用菜单按钮及其弹出层。
+ */
 import autotoast from "autotoast.js";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
@@ -35,6 +48,7 @@ type MenuLeaf =
     }
   | { type: "separator" };
 
+// 菜单项：普通叶子项/分隔线，或带子菜单的父项
 type MenuItem =
   | MenuLeaf
   | {
@@ -81,6 +95,7 @@ const logoSvg = `${import.meta.env.BASE_URL}logo.svg`;
 const COMMAND_MENU_WIDTH = 280;
 const VIEWPORT_PADDING = 8;
 
+/** 关闭菜单与首选项面板及所有子菜单 */
 function closeAll() {
   isMenuOpen.value = false;
   isPreferencesOpen.value = false;
@@ -88,6 +103,7 @@ function closeAll() {
   activeSubmenuIndex.value = null;
 }
 
+/** 仅关闭下拉菜单 */
 function closeMenu() {
   isMenuOpen.value = false;
   cancelCloseSubmenu();
@@ -98,6 +114,7 @@ function closePreferences() {
   isPreferencesOpen.value = false;
 }
 
+/** 根据触发按钮位置计算菜单弹出坐标，并约束在视口内 */
 function updateMenuPosition() {
   const trigger = triggerRef.value;
   if (!trigger) return;
@@ -120,6 +137,7 @@ function cancelCloseSubmenu() {
   }
 }
 
+/** 延迟关闭子菜单（留出鼠标在父项与子菜单间移动的容差时间） */
 function scheduleCloseSubmenu() {
   cancelCloseSubmenu();
   submenuCloseTimer = window.setTimeout(() => {
@@ -128,6 +146,7 @@ function scheduleCloseSubmenu() {
   }, 150);
 }
 
+/** 打开指定父项的子菜单，并根据视口剩余空间决定向右或向左弹出 */
 function openSubmenu(index: number, event: MouseEvent) {
   cancelCloseSubmenu();
   activeSubmenuIndex.value = index;
@@ -150,6 +169,7 @@ function closeSubmenuImmediately() {
   activeSubmenuIndex.value = null;
 }
 
+/** 切换菜单开合；首选项打开时不响应 */
 async function toggleMenu() {
   if (isPreferencesOpen.value) return;
 
@@ -168,10 +188,12 @@ function openPreferences() {
   isPreferencesOpen.value = true;
 }
 
+/** 取导出文件的基础名（去掉 .md/.markdown 后缀） */
 function getExportBaseName() {
   return currentTab.value?.name?.replace(/\.(md|markdown)$/i, "") || "导出的文件";
 }
 
+/** 统一执行菜单动作：成功后关闭菜单，失败时弹出 toast 提示 */
 async function runAction(action: () => void | Promise<void>) {
   try {
     await action();
@@ -190,6 +212,7 @@ async function openFolder() {
   await setWorkSpace();
 }
 
+/** 将当前文件移动到用户选择的目录：必要时先保存，再移动并刷新工作区 */
 async function moveCurrentFile() {
   if (!currentTab.value?.filePath) {
     autotoast.show("请先保存当前文件后再移动", "warn");
@@ -251,6 +274,7 @@ function printCurrentFile() {
   window.print();
 }
 
+// 菜单项配置：定义整个下拉菜单的结构、图标、快捷键与对应动作
 const menuItems: MenuItem[] = [
   { type: "item", label: "新建", icon: "document-copy", shortcut: "Ctrl+N", action: createNewFile },
   {
@@ -305,6 +329,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+/** 当前展开父项对应的子菜单项列表 */
 const submenuChildren = computed<MenuLeaf[]>(() => {
   if (activeSubmenuIndex.value === null) return [];
   const item = menuItems[activeSubmenuIndex.value];
@@ -315,6 +340,7 @@ function handleFileChange() {
   closeMenu();
 }
 
+/** 点击菜单外部时关闭菜单（首选项打开时仅收起菜单） */
 function handleDocumentPointerDown(event: PointerEvent) {
   const root = rootRef.value;
   if (!root || root.contains(event.target as Node)) return;
@@ -325,6 +351,7 @@ function handleDocumentPointerDown(event: PointerEvent) {
   closeAll();
 }
 
+/** 全局快捷键：Esc 关闭菜单，Ctrl/Cmd 组合键触发新建/打开/保存/打印/首选项等 */
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === "Escape") {
     closeMenu();

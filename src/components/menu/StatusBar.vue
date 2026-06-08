@@ -1,4 +1,20 @@
 <script setup lang="ts">
+/**
+ * StatusBar.vue —— 底部状态栏
+ *
+ * 职责：
+ * - 左侧：源码/富文本切换按钮，以及更新下载进度的内联提示（点击可恢复更新弹窗）。
+ * - 右侧：保存状态、字数/行数统计、只读切换、全文 Markdown 语法检查面板。
+ *
+ * 主要 props：
+ * - content：当前文档内容，用于字数/行数统计与语法检查。
+ * - updateStatus / downloadProgress / isUpdateDialogVisible：更新进度提示相关状态。
+ *
+ * 主要 emits：
+ * - restore-update：点击进度条恢复更新对话框。
+ *
+ * UI 位置：编辑器窗口最底部。
+ */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import useSourceCode from "@/hooks/useSourceCode";
@@ -6,12 +22,17 @@ import useTab from "@/hooks/useTab";
 import { checkMarkdownSyntax } from "@/utils/markdownSyntaxCheck";
 
 const props = defineProps<{
+  /** 当前文档内容 */
   content: string;
+  /** 更新流程状态 */
   updateStatus?: "idle" | "downloading" | "downloaded" | "error";
+  /** 更新下载进度百分比 */
   downloadProgress?: number;
+  /** 更新对话框是否已显示（决定是否在状态栏内联提示） */
   isUpdateDialogVisible?: boolean;
 }>();
 const emit = defineEmits<{
+  /** 请求恢复显示更新对话框 */
   (e: "restore-update"): void;
 }>();
 
@@ -20,6 +41,7 @@ const { currentTab } = useTab();
 const syntaxPanelVisible = ref(false);
 const syntaxIssues = ref<ReturnType<typeof checkMarkdownSyntax>>([]);
 
+/** 当前标签页的保存状态文案 */
 const saveStatusText = computed(() => {
   const tab = currentTab.value;
   if (!tab) return "已保存";
@@ -28,11 +50,13 @@ const saveStatusText = computed(() => {
   return tab.isModified ? "未保存" : "已保存";
 });
 
+/** 文档字数（按中文字符与英文单词计数） */
 const wordCount = computed(() => {
   const text = props.content ?? "";
   return countMarkdownWords(text);
 });
 
+/** 文档行数（含空行） */
 const lineCount = computed(() => {
   return countMarkdownLines(props.content ?? "", { skipEmpty: false });
 });
@@ -41,6 +65,7 @@ function handleRestore() {
   emit("restore-update");
 }
 
+/** 统计行数，可选择是否跳过空行 */
 function countMarkdownLines(text: string, options = { skipEmpty: true }): number {
   if (!text) return options.skipEmpty ? 0 : 1;
   const rawLines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
@@ -49,6 +74,7 @@ function countMarkdownLines(text: string, options = { skipEmpty: true }): number
   }
   return rawLines.length;
 }
+/** 统计字数：剥离代码块、图片、链接 URL 与各类语法符号后，匹配中文字符与英文单词 */
 function countMarkdownWords(text: string): number {
   const base64Regex = /data:image\/[a-zA-Z]+;base64,[a-zA-Z0-9+/=]+/g;
   const normalized = text
@@ -61,11 +87,13 @@ function countMarkdownWords(text: string): number {
   return normalized.match(/[\u4e00-\u9fa5]|[a-zA-Z0-9]+/g)?.length ?? 0;
 }
 
+/** 切换当前标签页的只读/可编辑状态 */
 function toggleReadOnly() {
   if (!currentTab.value) return;
   currentTab.value.readOnly = !currentTab.value.readOnly;
 }
 
+/** 对全文执行 Markdown 语法检查并展开结果面板 */
 function runSyntaxCheck() {
   syntaxIssues.value = checkMarkdownSyntax(props.content ?? "");
   syntaxPanelVisible.value = true;

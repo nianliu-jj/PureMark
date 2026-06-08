@@ -1,4 +1,20 @@
 <script setup lang="ts">
+/**
+ * MarkdownSourceEditor.vue —— Markdown 源码编辑器
+ *
+ * 职责：
+ * - 基于 CodeMirror 6 提供纯文本的 Markdown 源码编辑视图（与所见即所得的 PureMarkEditor 互为切换）。
+ * - 双向同步源码内容，并在源码光标与 PureMark 富文本光标之间做近似位置换算，
+ *   以便在两种模式切换时尽量保持光标位置一致。
+ *
+ * 主要 props：
+ * - modelValue：源码文本，配合 update:modelValue 实现 v-model。
+ * - readOnly：是否只读。
+ *
+ * 主要 emits：update:modelValue（文档变化时回传最新源码）。
+ *
+ * UI 位置：编辑区在源码模式下的主体，占满整个编辑容器。
+ */
 import { basicSetup } from "codemirror";
 import { EditorView } from "@codemirror/view";
 import { markdown } from "@codemirror/lang-markdown";
@@ -7,6 +23,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import useSourceCode from "@/hooks/useSourceCode";
 import useTab from "@/hooks/useTab";
 
+/** 描述源码中一段链接/图片 Markdown 语法的位置信息，用于光标偏移换算 */
 interface MdSpan {
   type: "link" | "image";
   start: number;
@@ -19,13 +36,15 @@ interface MdSpan {
 }
 
 const props = defineProps<{
+  /** 源码文本（v-model） */
   modelValue: string;
+  /** 是否只读 */
   readOnly: boolean | undefined;
 }>();
 const emit = defineEmits(["update:modelValue"]);
 const { toggleSourceCode } = useSourceCode();
 const { currentTab } = useTab();
-// 禁用注释快捷键 Ctrl-/Cmd-/
+// 拦截 Ctrl/Cmd-/ 注释快捷键，改为切换源码/富文本模式（优先级最高，覆盖 CodeMirror 默认行为）
 const blockCtrlSlashDOM = Prec.highest(
   EditorView.domEventHandlers({
     keydown: (e, _view) => {
@@ -41,6 +60,7 @@ const blockCtrlSlashDOM = Prec.highest(
 const editorContainer = ref<HTMLElement>();
 let editorView: EditorView | null = null;
 
+// 挂载时创建 CodeMirror 实例，并恢复上次记录的光标位置
 onMounted(() => {
   const startState = EditorState.create({
     doc: props.modelValue,
@@ -78,7 +98,7 @@ onMounted(() => {
     scrollIntoView: true,
   });
 });
-// 同步外部 props 变化
+// 同步外部 props 变化：当外部 modelValue 与编辑器内容不一致时整体替换文档，并钳制光标位置
 watch(
   () => props.modelValue,
   (newVal) => {
@@ -98,10 +118,14 @@ watch(
   }
 );
 
-// 清理
+// 清理：销毁 CodeMirror 实例避免内存泄漏
 onBeforeUnmount(() => {
   editorView?.destroy();
 });
+/**
+ * 将 Markdown 源码近似还原为纯文本（剥离各类语法符号），
+ * 用于估算富文本（PureMark）中的字符偏移量。
+ */
 function toPuredownApproxText(md: string): string {
   return (
     md
@@ -123,6 +147,7 @@ function toPuredownApproxText(md: string): string {
       .trim()
   );
 }
+/** 扫描源码，找出所有链接/图片语法片段及其在文本中的精确范围 */
 function findMdSpans(md: string): MdSpan[] {
   const spans: MdSpan[] = [];
   // eslint-disable-next-line regexp/no-unused-capturing-group
@@ -148,6 +173,10 @@ function findMdSpans(md: string): MdSpan[] {
   }
   return spans;
 }
+/**
+ * 根据源码光标偏移 cmOffset，估算其在 PureMark 富文本中的近似字符偏移，
+ * 链接/图片整体视为一个字符，[text] 内部按文本内位置计算。
+ */
 function calcPuredownOffset(md: string, cmOffset: number): number {
   const spans = findMdSpans(md);
   let puredownOffset = 0;

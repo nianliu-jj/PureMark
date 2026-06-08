@@ -1,4 +1,16 @@
 <script setup lang="ts">
+/**
+ * Outline.vue —— 文档大纲面板
+ *
+ * 职责：
+ * - 展示当前文档的标题层级大纲，支持点击跳转、折叠/展开、按级别批量折叠。
+ * - 通过右键菜单提供「跳转到该位置」与「按级别折叠/全部展开」操作。
+ *
+ * 数据来自 useOutline 提供的 outline（标题列表），跳转通过全局 emitter 的
+ * outline:scrollTo 事件通知编辑器滚动。无 props / emits。
+ *
+ * UI 位置：右侧大纲侧栏。
+ */
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import emitter from "@/events";
@@ -6,12 +18,15 @@ import useOutline from "@/hooks/useOutline";
 
 const { outline } = useOutline();
 
+// 记录被折叠的标题 id 集合
 const collapsedSet = reactive(new Set<string>());
 
+/** 当前大纲中拥有子标题（可折叠）的条目数量 */
 const collapsibleCount = computed(() =>
   outline.value.reduce((count, _item, index) => count + (hasChildren(index) ? 1 : 0), 0)
 );
 
+/** 判断某条目是否因其某个祖先标题被折叠而应隐藏 */
 function isHiddenByCollapse(index: number): boolean {
   const items = outline.value;
   let targetLevel = items[index].level;
@@ -26,12 +41,14 @@ function isHiddenByCollapse(index: number): boolean {
   return false;
 }
 
+/** 判断某条目下方是否存在更深层级的子标题 */
 function hasChildren(index: number): boolean {
   const items = outline.value;
   const currentLevel = items[index].level;
   return index + 1 < items.length && items[index + 1].level > currentLevel;
 }
 
+/** 切换单个标题的折叠状态 */
 function toggleCollapse(oi: { id: string }) {
   if (collapsedSet.has(oi.id)) {
     collapsedSet.delete(oi.id);
@@ -40,10 +57,12 @@ function toggleCollapse(oi: { id: string }) {
   }
 }
 
+/** 点击大纲条目：通知编辑器滚动到对应位置 */
 function onOiClick(oi: { pos: number }) {
   emitter.emit("outline:scrollTo", oi.pos);
 }
 
+// 右键上下文菜单状态
 const contextMenu = ref<{
   visible: boolean;
   x: number;
@@ -58,6 +77,7 @@ const contextMenu = ref<{
 
 const showCollapseSubmenu = ref(false);
 
+/** 在大纲条目上右键：定位并打开上下文菜单 */
 function onItemContextMenu(
   e: MouseEvent,
   oi: { id: string; text: string; level: number; pos: number }
@@ -78,6 +98,7 @@ function closeContextMenu() {
   showCollapseSubmenu.value = false;
 }
 
+/** 上下文菜单：跳转到右键所选标题位置 */
 function handleJump() {
   if (contextMenu.value.item) {
     emitter.emit("outline:scrollTo", contextMenu.value.item.pos);
@@ -85,6 +106,7 @@ function handleJump() {
   closeContextMenu();
 }
 
+/** 折叠所有指定级别且有子标题的条目 */
 function collapseByLevel(level: number) {
   outline.value.forEach((oi, index) => {
     if (oi.level === level && hasChildren(index)) {
@@ -94,11 +116,13 @@ function collapseByLevel(level: number) {
   closeContextMenu();
 }
 
+/** 展开全部 */
 function expandAll() {
   collapsedSet.clear();
   closeContextMenu();
 }
 
+/** 折叠全部有子标题的条目 */
 function collapseAll() {
   outline.value.forEach((oi, index) => {
     if (hasChildren(index)) {
@@ -107,6 +131,7 @@ function collapseAll() {
   });
 }
 
+// 大纲变化时清理已失效（不再存在）的折叠 id，避免集合无限增长
 watch(
   outline,
   (items) => {

@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/**
+ * MenuBar.vue —— 偏好设置面板的左侧导航 + 右侧内容容器
+ *
+ * 职责：
+ * - 作为「设置/偏好」整体页面的骨架：左列竖向菜单（文件、设置、外观、快捷键、关于），
+ *   右侧根据当前选中项动态挂载对应的设置子组件。
+ * - 进入面板时自动做一次静默的后台更新检查。
+ *
+ * 主要 emits：
+ * - exit-preferences：点击「返回」时通知父级退出偏好设置、回到编辑器。
+ *
+ * UI 位置：覆盖编辑区的偏好设置全屏面板。
+ */
 import { computed, onMounted, ref, type Component } from "vue";
 import About from "@/components/settings/About.vue";
 import appearancePage from "@/components/settings/AppearancePage.vue";
@@ -10,9 +23,11 @@ import { checkUpdate } from "@/services/api/update.js";
 
 type MenuTab = "settings" | "about" | "appearance" | "file" | "shortcut";
 
+// 模块级标志，确保整个会话只自动检查一次更新
 let hasAutoCheckedUpdate = false;
 
 const activeTab = ref<MenuTab>("file");
+// 菜单项标识 -> 对应的设置子组件，供右侧 <component :is> 动态渲染
 const menuComponents: Record<MenuTab, Component> = {
   settings: SettingBase,
   about: About,
@@ -20,11 +35,14 @@ const menuComponents: Record<MenuTab, Component> = {
   file: FileOptions,
   shortcut: ShortcutPage,
 };
+/** 当前选中菜单对应的设置组件 */
 const activeComponent = computed(() => menuComponents[activeTab.value]);
 const emit = defineEmits<{
+  /** 退出偏好设置面板 */
   (event: "exit-preferences"): void;
 }>();
 
+// 左侧导航菜单配置：点击切换 activeTab，驱动右侧内容更新
 const menuOptions: Array<{
   label: string;
   action: () => void;
@@ -53,6 +71,7 @@ const menuOptions: Array<{
   { label: "关于", action: () => (activeTab.value = "about"), icon: "github", value: "about" },
 ];
 
+/** 通知父级退出偏好设置 */
 function exitPreferences() {
   emit("exit-preferences");
 }

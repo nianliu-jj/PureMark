@@ -1,17 +1,43 @@
 <script setup lang="ts">
+/**
+ * SaveConfirmDialog.vue —— 保存/覆盖确认对话框
+ *
+ * 职责：
+ * - 在以下三种场景弹出确认框，复用同一套样式与结构：
+ *   1. close：关闭存在未保存修改的标签页。
+ *   2. overwrite：另存为时目标文件已存在，确认是否覆盖。
+ *   3. file-changed：磁盘上的文件被外部改动，确认是否用当前编辑内容覆盖。
+ *
+ * 主要 props：
+ * - visible：是否显示对话框。
+ * - type：对话框类型，决定标题、正文与底部按钮组合。
+ * - tabName / fileName：用于在文案中展示文档名或文件名。
+ *
+ * 主要 emits：save / discard / cancel / overwrite，由宿主决定具体动作。
+ *
+ * UI 位置：全屏遮罩的模态对话框（position: fixed）。
+ */
 type DialogType = "close" | "overwrite" | "file-changed";
 
 interface Props {
+  /** 是否可见 */
   visible: boolean;
+  /** 标签页名称，用于 close 场景的文案 */
   tabName?: string;
+  /** 对话框类型，决定展示内容与按钮 */
   type?: DialogType;
+  /** 文件名，用于 overwrite / file-changed 场景的文案 */
   fileName?: string;
 }
 
 interface Emits {
+  /** 用户选择保存 */
   (e: "save"): void;
+  /** 用户选择丢弃修改 */
   (e: "discard"): void;
+  /** 用户取消操作 */
   (e: "cancel"): void;
+  /** 用户确认覆盖 */
   (e: "overwrite"): void;
 }
 

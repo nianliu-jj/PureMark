@@ -1,4 +1,17 @@
 <script setup lang="ts">
+/**
+ * TitleBar.vue —— 自定义窗口标题栏
+ *
+ * 职责：
+ * - 承载标签栏（TabBar）、新建标签、左右侧栏切换按钮与应用菜单（MenuDropDown）。
+ * - 根据平台区分布局：Windows 使用右侧窗口控制按钮（最小化/最大化/关闭），
+ *   macOS 使用左侧红绿灯（traffic lights）。
+ * - 整条标题栏支持拖拽移动窗口（data-tauri-drag-region）。
+ *
+ * 无 props / emits，窗口操作通过 services/api 的 Tauri 封装完成。
+ *
+ * UI 位置：编辑器窗口最顶部。
+ */
 import { onMounted, onUnmounted, ref } from "vue";
 import { platform as osPlatform } from "@tauri-apps/plugin-os";
 import AppIcon from "@/components/ui/AppIcon.vue";
@@ -21,6 +34,7 @@ const isFullScreen = ref(false);
 
 let unsubResized: (() => void) | null = null;
 
+/** 刷新窗口是否处于最大化/全屏，用于切换最大化图标 */
 async function refreshMaximized() {
   try {
     isFullScreen.value = (await isMaximized()) || (await isFullscreen());
@@ -63,6 +77,7 @@ onMounted(async () => {
   }
 
   await refreshMaximized();
+  // 订阅窗口尺寸变化，最大化状态变化时同步图标
   unsubResized = await onWindowResized(refreshMaximized);
 });
 
@@ -74,10 +89,12 @@ function onCreateFile() {
   createNewFile();
 }
 
+/** 切换左侧文件栏显隐 */
 function toggleFileSidebar() {
   toggleSidebar("file");
 }
 
+/** 切换右侧大纲栏显隐 */
 function toggleOutlineSidebar() {
   toggleSidebar("outline");
 }
@@ -85,6 +102,7 @@ function toggleOutlineSidebar() {
 
 <template>
   <div class="TitleBarBox" data-tauri-drag-region>
+    <!-- Windows 平台布局：标签栏 + 侧栏开关 + 应用菜单 + 右侧窗口控制按钮 -->
     <template v-if="isWin">
       <TabBar />
 
@@ -124,6 +142,7 @@ function toggleOutlineSidebar() {
       </div>
     </template>
     <template v-else>
+      <!-- macOS 平台布局：左侧红绿灯（关闭/最小化/最大化）+ 标签栏 + 侧栏开关 + 菜单 -->
       <div class="traffic-lights">
         <button class="traffic-light close" title="关闭" aria-label="关闭" @click="onClose">
           <svg viewBox="0 0 12 12" class="traffic-glyph">

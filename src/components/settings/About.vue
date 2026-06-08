@@ -1,4 +1,15 @@
 <script setup lang="ts">
+/**
+ * About.vue —— 关于页（设置面板「关于」标签）
+ *
+ * 职责：
+ * - 展示应用名称、版本、版权与项目主页链接。
+ * - 提供「检查更新 / 下载并安装」一体化按钮，并实时显示检查/下载/安装进度。
+ * - 监听后端更新状态与下载进度事件（支持多窗口广播）。
+ *
+ * 无 props / emits，更新能力通过 services/api/update 封装调用。
+ * UI 位置：偏好设置面板右侧内容区。
+ */
 import autotoast from "autotoast.js";
 import { openExternal } from "@/services/api";
 import {
@@ -17,10 +28,12 @@ import LoadingIcon from "../ui/LoadingIcon.vue";
 
 const logoSvg = `${import.meta.env.BASE_URL}logo.svg`;
 
+/** 用系统默认浏览器打开外部链接 */
 function openByDefaultBrowser(url: string) {
   openExternal(url).catch((e) => console.error("[About] openExternal failed:", e));
 }
 
+/** 读取并校验缓存在 localStorage 的更新信息，损坏时清除并返回空对象 */
 function readStoredUpdateInfo(): Partial<UpdateInfo> {
   const raw = localStorage.getItem("updateInfo");
   if (!raw) return {};
@@ -34,6 +47,7 @@ function readStoredUpdateInfo(): Partial<UpdateInfo> {
   }
 }
 
+/** 比较版本号，判断 stored 是否比 current 更新（逐段数值比较） */
 function isNewerVersion(stored: string, current: string): boolean {
   const s = stored.replace(/^v/, "").split(".").map(Number);
   const c = current.replace(/^v/, "").split(".").map(Number);
@@ -47,6 +61,7 @@ function isNewerVersion(stored: string, current: string): boolean {
 }
 
 const storedUpdateInfo = ref<Partial<UpdateInfo>>(readStoredUpdateInfo());
+/** 是否存在比当前版本更新的可用版本 */
 const hasNewVersion = computed(() =>
   Boolean(storedUpdateInfo.value.version && isNewerVersion(storedUpdateInfo.value.version, version))
 );
@@ -55,6 +70,7 @@ const hasNewVersion = computed(() =>
 const updatePhase = ref<"idle" | "checking" | "downloading" | "installing">("idle");
 const downloadPercent = ref(0);
 
+/** 手动检查更新，发现新版本则缓存其信息 */
 async function handleCheckUpdate() {
   if (updatePhase.value !== "idle") return;
   updatePhase.value = "checking";
@@ -75,6 +91,7 @@ async function handleCheckUpdate() {
   }
 }
 
+/** 下载并安装更新（安装会退出应用） */
 async function handleDownloadAndInstall() {
   if (updatePhase.value !== "idle") return;
   updatePhase.value = "downloading";
@@ -133,9 +150,7 @@ onUnmounted(() => {
         :disabled="updatePhase !== 'idle'"
         @click="hasNewVersion ? handleDownloadAndInstall() : handleCheckUpdate()"
       >
-        <span v-if="updatePhase === 'checking'">
-          <LoadingIcon class="btnIcon" /> 检查中…
-        </span>
+        <span v-if="updatePhase === 'checking'"> <LoadingIcon class="btnIcon" /> 检查中… </span>
         <span v-else-if="updatePhase === 'downloading'">
           <LoadingIcon class="btnIcon" /> 下载中 {{ downloadPercent }}%
         </span>

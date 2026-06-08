@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * AppearancePage.vue —— 外观设置聚合页
+ *
+ * 职责：将主题、背景板、字体、其他外观相关子面板组合在一个滚动页面中。
+ * 自身不含逻辑，仅作为分区容器。无 props / emits。
+ * UI 位置：偏好设置面板「外观」标签内容区。
+ */
 import BackgroundPanel from "./BackgroundPanel.vue";
 import FontPage from "./FontPage.vue";
 import OtherSetting from "./OtherSetting.vue";
