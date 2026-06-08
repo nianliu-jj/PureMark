@@ -8,6 +8,7 @@ import { EditorState, Transaction, TextSelection } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { toggleMark, setBlockType, wrapIn, lift } from "prosemirror-commands";
 
+/** ProseMirror 命令签名：接收 state 与可选 dispatch，返回命令是否可执行（适用） */
 type Command = (state: EditorState, dispatch?: (tr: Transaction) => void) => boolean;
 
 /**
@@ -251,7 +252,10 @@ export function insertTable(rows = 3, cols = 3): Command {
 }
 
 /**
- * 查找光标所在的表格上下文
+ * 查找光标所在的表格上下文。
+ * 从当前选区 $from 自内向外遍历各层节点，定位 table、table_row、table_cell/header 所在的 depth，
+ * 并计算当前所在的行索引、列索引以及 table 在文档中的起始位置，供表格增删行列命令复用。
+ * @returns 表格上下文信息；若光标不在表格内则返回 null
  */
 function findTableContext(state: EditorState) {
   const { $from } = state.selection;
@@ -344,7 +348,9 @@ export function addRowAtEnd(state: EditorState, dispatch?: (tr: Transaction) => 
 }
 
 /**
- * 在当前列左侧插入一列
+ * 在当前列左侧插入一列。
+ * 遍历表格每一行，计算目标列单元格在文档中的绝对位置，逐行插入新单元格。
+ * 由于每次插入都会改变后续位置，故用 offset 累计已插入节点的尺寸进行位置修正。
  */
 export function addColumnBefore(state: EditorState, dispatch?: (tr: Transaction) => void): boolean {
   const ctx = findTableContext(state);
@@ -441,7 +447,8 @@ export function deleteRow(state: EditorState, dispatch?: (tr: Transaction) => vo
 }
 
 /**
- * 删除当前列
+ * 删除当前列。
+ * 逐行删除目标列单元格，offset 用于补偿前面行已删除节点导致的位置偏移（负向累加）。
  */
 export function deleteColumn(state: EditorState, dispatch?: (tr: Transaction) => void): boolean {
   const ctx = findTableContext(state);
@@ -483,6 +490,10 @@ export function getCurrentRowMarkdown(state: EditorState): string | null {
   return `| ${cells.join(" | ")} |`;
 }
 
+/**
+ * 解析单行 Markdown 表格文本（形如 `| a | b |`）为单元格文本数组。
+ * @returns 单元格文本数组；若文本不符合表格行格式则返回 null
+ */
 function parseMarkdownTableRow(text: string): string[] | null {
   const trimmed = text.trim();
   if (!/^\|.*\|$/u.test(trimmed)) return null;
@@ -569,6 +580,7 @@ export function insertContainer(type = "note", title = ""): Command {
   };
 }
 
+/** 所有编辑器命令的聚合导出对象，便于按名称统一引用 */
 export const commands = {
   toggleStrong,
   toggleEmphasis,

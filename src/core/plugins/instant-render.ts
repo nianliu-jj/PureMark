@@ -58,6 +58,7 @@ export function createInstantRenderPlugin(config: InstantRenderConfig = {}): Plu
       apply(tr, state, _oldEditorState, newEditorState) {
         const meta = tr.getMeta(instantRenderPluginKey);
 
+        // 通过 meta 切换启用状态时，仅更新 enabled 标志
         if (meta?.enabled !== undefined) {
           return {
             ...state,
@@ -65,6 +66,7 @@ export function createInstantRenderPlugin(config: InstantRenderConfig = {}): Plu
           };
         }
 
+        // 光标移动或文档变化时，重新计算光标命中的语法标记区域（供外部查询）
         const cursorPos = newEditorState.selection.head;
         if (cursorPos !== state.lastCursorPos || tr.docChanged) {
           const regions = findSyntaxMarkerRegions(newEditorState.doc);

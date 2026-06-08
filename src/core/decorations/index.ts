@@ -412,7 +412,18 @@ function isSyntaxTypeRelated(syntaxType: string, semanticType: string): boolean 
 }
 
 /**
- * 计算装饰集
+ * 计算当前文档的 decoration 集合（即时渲染的核心）。
+ *
+ * 工作机制：语法标记（如 `**`、`#`）是真实文本，始终存在于文档中；本函数仅通过 inline decoration
+ * 给它们打上 hidden / visible 的 CSS 类来控制显隐，从而实现「光标移入显示源码、移出隐藏源码」的即时渲染。
+ * 同时为不含光标的行内数学公式追加 widget decoration 渲染 KaTeX 结果并隐藏源码。
+ *
+ * @param doc 当前文档节点
+ * @param cursorPos 光标位置（决定哪些语法标记需要显示）
+ * @param sourceView 是否处于源码模式（源码模式下跳过所有显隐切换，直接返回空集）
+ * @param precomputedSyntaxRegions 可选的预扫描语法标记区域（选区变化时复用以避免重复扫描）
+ * @param precomputedMathRegions 可选的预扫描行内数学区域
+ * @returns decoration 集合、当前激活区域，以及供缓存复用的区域扫描结果
  */
 export function computeDecorations(
   doc: Node,
@@ -568,7 +579,10 @@ export function getActiveRegions(cursorPos: number, regions: any[]): any[] {
 }
 
 /**
- * 创建装饰插件
+ * 创建装饰 plugin。
+ * plugin state 中缓存 decoration 集合与区域扫描结果；apply 时根据 transaction 判断：
+ * 文档变化或源码模式切换才重新扫描整篇文档，仅选区变化时复用缓存的区域以提升性能。
+ * @param initialSourceView 初始是否为源码模式
  */
 export function createDecorationPlugin(initialSourceView = false): Plugin<DecorationPluginState> {
   return new Plugin<DecorationPluginState>({

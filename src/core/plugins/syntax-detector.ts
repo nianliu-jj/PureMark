@@ -22,6 +22,10 @@ function generateConsecutiveImageGroupId(): string {
   return `cig_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
+/**
+ * 解析一段文本是否为同一行的多张连续图片（如 `![a](1)![b](2)`）。
+ * @returns 解析到的图片属性数组（至少 2 张），否则返回 null
+ */
 function parseConsecutiveImages(text: string): Array<{
   alt: string;
   src: string;
@@ -79,7 +83,7 @@ function parseConsecutiveImages(text: string): Array<{
   return images.length >= 2 ? images : null;
 }
 
-/** 行内语法定义 */
+/** 行内语法定义（检测用），与 parser 中的同名结构对应 */
 interface InlineSyntax {
   type: string;
   pattern: RegExp;
@@ -682,7 +686,10 @@ function hasCorrectMarks(
 }
 
 /**
- * 创建语法检测插件
+ * 创建语法检测 plugin。
+ * 通过 appendTransaction 在文档变化后被动扫描各文本块，检测 Markdown 行内语法并补齐/修正
+ * 对应的语义 mark 与 syntax_marker。用 "syntax-plugin-internal" meta 标记自身产生的 transaction 以避免循环。
+ * 标题前缀、代码块/数学块等不参与行内语法检测。
  */
 export function createSyntaxDetectorPlugin(): Plugin {
   return new Plugin({

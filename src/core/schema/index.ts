@@ -76,6 +76,12 @@ const doc: NodeSpec = {
   content: "block+",
 };
 
+/**
+ * 段落节点。
+ * 除常规行内内容外，携带大量「源码模式专用」attrs（codeBlockId / tableId / mathBlockId / listId 等）。
+ * 在源码模式下，代码块、表格、数学块、列表等会被拆解为带这些 attrs 的段落以逐行编辑，
+ * toDOM 据此输出 data-* 属性供 CSS 与同步插件识别。
+ */
 const paragraph: NodeSpec = {
   attrs: {
     // 代码块相关属性（仅在源码模式下使用）
@@ -684,6 +690,10 @@ const syntax_marker: MarkSpec = {
 
 // ============ Schema 导出 ============
 
+/**
+ * PureMark 编辑器的完整 ProseMirror Schema。
+ * marks 中 syntax_marker 排在最前以获得最高优先级，确保语法符号文本能被独立标记并由 decoration 控制显隐。
+ */
 export const puremarkSchema = new Schema({
   nodes: {
     doc,

@@ -85,7 +85,10 @@ import { openLink } from "@/services/api";
 import { getStorageItemWithFallback } from "@/shared/utils/storage";
 
 /**
- * 将 ProseMirror 快捷键格式转为显示文本
+ * 将 ProseMirror 快捷键格式（如 "Mod-Shift-X"）转换为面向用户的显示文本。
+ * 会根据当前平台（Mac / 其他）将修饰键映射为对应符号，Mac 下用符号拼接、其他平台用 "+" 拼接。
+ * @param key ProseMirror 风格的快捷键字符串
+ * @returns 用于界面展示的快捷键文本
  */
 function formatShortcutDisplay(key: string): string {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform);

@@ -34,6 +34,11 @@ function openLinkExternal(href: string) {
   });
 }
 
+/**
+ * 创建链接 tooltip plugin。
+ * 在 plugin 的 view 生命周期内绑定 mousemove/mouseleave/click（capture 阶段）/scroll 事件，
+ * 实现链接悬停提示、拦截默认跳转、Ctrl/Cmd+左击用外部浏览器打开，并在 destroy 时清理事件与 DOM。
+ */
 export function createLinkTooltipPlugin(): Plugin {
   let tooltip: HTMLElement | null = null;
   let currentLink: HTMLAnchorElement | null = null;

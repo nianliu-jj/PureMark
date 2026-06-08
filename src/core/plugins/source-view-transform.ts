@@ -30,10 +30,12 @@ function generateHtmlBlockId(): string {
   return `hb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+/** 生成连续图片组的唯一 ID（同一行多张图片共用一个 group ID） */
 function generateConsecutiveImageGroupId(): string {
   return `cig_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
+/** 由图片节点 attrs 生成对应的 Markdown 源码文本 */
 function buildImageMarkdown(image: ProseMirrorNode): string {
   return buildImageSourceText({
     alt: image.attrs.alt || "",

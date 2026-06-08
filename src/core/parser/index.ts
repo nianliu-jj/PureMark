@@ -19,19 +19,27 @@ import { puremarkSchema } from "../schema";
 import type { SyntaxMarker } from "../types";
 import { parseHtmlImageSource } from "../utils/html-image";
 
-/** 解析结果 */
+/** 解析结果：ProseMirror 文档根节点及解析过程中收集的语法标记列表 */
 export interface ParseResult {
   doc: Node;
   markers: SyntaxMarker[];
 }
 
-/** 行内语法定义 */
+/**
+ * 行内语法定义。
+ * 每条定义描述一种行内 Markdown 语法（如粗体、链接），用于把匹配到的源码文本拆分为
+ * 前缀标记 + 内容 + 后缀标记，并为内容附加对应的 mark。
+ */
 interface InlineSyntax {
   type: string;
   pattern: RegExp;
+  /** 前缀语法标记文本，或根据匹配动态计算的函数（如 strong 可能是 ** 或 __） */
   prefix: string | ((match: RegExpExecArray) => string);
+  /** 后缀语法标记文本，或根据匹配动态计算的函数 */
   suffix: string | ((match: RegExpExecArray) => string);
+  /** 内容在正则捕获组中的索引 */
   contentIndex: number;
+  /** 从匹配中提取节点 attrs（如 link 的 href、math 的 content） */
   getAttrs?: (match: RegExpExecArray) => Record<string, any>;
 }
 
@@ -518,7 +526,17 @@ export class MarkdownParser {
   private static ESCAPE_RE = /\\([\\`*_{}[\]()#+\-.!|~=$>])/g;
 
   /**
-   * 解析行内内容 - 保留语法标记，支持嵌套语法
+   * 解析行内内容（核心算法），保留语法标记并支持嵌套语法。
+   *
+   * 流程：1) 先识别链接/数学公式等受保护范围，避免其中的 `\` 被当作 Markdown 转义；
+   * 2) 若存在转义则交由 parseInlineWithEscapes 处理；
+   * 3) 否则收集所有行内语法匹配，按位置排序并过滤重叠（保留外层更长匹配）；
+   * 4) 逐段构建节点：前缀文本（带 syntax_marker + 语义 mark）、递归解析的内容、后缀文本。
+   * 语法标记作为真实文本保留，从而支持光标在标记内自由移动与即时渲染。
+   *
+   * @param text 待解析的行内文本
+   * @param inheritedMarks 由外层嵌套语法传入、需附加到所有子节点上的 mark
+   * @returns 解析后的 ProseMirror 行内节点数组
    */
   private parseInlineWithSyntax(text: string, inheritedMarks: Mark[] = []): Node[] {
     if (!text) return [];

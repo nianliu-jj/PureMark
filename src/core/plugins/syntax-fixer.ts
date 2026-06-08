@@ -8,7 +8,7 @@
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 
-/** 语法定义 */
+/** 语法定义：语义 mark 类型名及其可能的成对标记文本 */
 interface SyntaxDef {
   markType: string;
   markers: string[]; // 可能的语法标记，如 ['**', '__'] 对应 strong
@@ -76,8 +76,9 @@ function collectSyntaxMarkers(node: Node, basePos: number): SyntaxMarkerInfo[] {
 }
 
 /**
- * 检查语法标记是否成对
- * 返回需要移除 marks 的范围
+ * 检查文本块内各语法标记是否成对，返回需要移除语义 mark 的范围。
+ * 按语法类型分组后用栈做配对（相同标记文本互相配对）；未配对的标记说明语法已被破坏，
+ * 需定位其所在的完整语义区域并清除对应的语义 mark 与 syntax_marker。
  */
 function findUnpairedMarkers(
   node: Node,

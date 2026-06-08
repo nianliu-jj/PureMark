@@ -1,7 +1,18 @@
+/**
+ * PureMark 成对符号自动补全插件
+ *
+ * 处理括号/引号/反引号等成对符号的输入体验：
+ * - 选中文本时输入成对符号会包裹选区（wrap）
+ * - 在合适的上下文输入开符号会自动补全闭符号并把光标置于中间
+ * - 在已存在的闭符号前再次输入相同闭符号时跳过（避免重复）
+ * - Backspace 删除成对符号的开符号时一并删除紧邻的闭符号
+ */
+
 import type { Node as ProseMirrorNode } from "prosemirror-model";
 import { Plugin, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 
+/** 输入开符号即自动补全闭符号的成对符号 */
 const AUTO_PAIR_INSERT_PAIRS = {
   "(": ")",
   "{": "}",
@@ -9,6 +20,7 @@ const AUTO_PAIR_INSERT_PAIRS = {
   "'": "'",
 } as const;
 
+/** 仅在包裹选区时成对、单独输入不自动补全的符号 */
 const WRAP_ONLY_PAIRS = {
   "[": "]",
   "`": "`",
@@ -93,6 +105,12 @@ function wrapSelection(view: EditorView, char: keyof typeof AUTO_PAIR_PAIRS): bo
   return true;
 }
 
+/**
+ * 创建成对符号自动补全 plugin。
+ * 通过 handleTextInput 处理符号输入（包裹/补全/跳过闭符号），
+ * 通过 handleKeyDown 处理 Backspace 同时删除成对符号。
+ * @param isEnabled 运行时查询是否启用该功能的回调（受配置控制）
+ */
 export function createAutoPairPlugin(isEnabled: () => boolean): Plugin {
   return new Plugin({
     props: {

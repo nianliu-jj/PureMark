@@ -321,8 +321,16 @@ function orderedToBulletRule(
 }
 
 /**
- * 创建带 syntax_marker 的行内规则
- * 保持与解析器一致的文档结构
+ * 创建带 syntax_marker 的行内输入规则（通用工厂）。
+ * 匹配后删除原始文本，重建为「前缀标记 + 内容 + 后缀标记」三段结构：
+ * 前后缀文本同时带 syntax_marker（用于显隐控制）和语义 mark，内容文本仅带语义 mark，
+ * 从而与 parser 产出的文档结构保持一致，保证即时渲染与序列化往返稳定。
+ * @param pattern 触发的正则（通常以 `$` 结尾，匹配光标前文本）
+ * @param markType 语义 mark 类型（strong、emphasis 等）
+ * @param prefix 前缀标记文本或其计算函数
+ * @param suffix 后缀标记文本或其计算函数
+ * @param contentIndex 内容在正则捕获组中的索引
+ * @param syntaxType syntax_marker 的语法类型标识
  */
 function createInlineRuleWithSyntax(
   pattern: RegExp,
