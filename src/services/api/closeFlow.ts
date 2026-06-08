@@ -1,3 +1,10 @@
+/**
+ * 窗口关闭流程能力封装层（services/api）。
+ *
+ * 作为渲染层访问 Tauri 窗口关闭系统能力的统一入口，
+ * 负责拦截操作系统关闭请求、在渲染层处理完未保存提示后强制关闭窗口，
+ * 以及 macOS 主窗口"关闭即隐藏"的特殊行为。
+ */
 import { invoke } from "@tauri-apps/api/core";
 import { platform as osPlatform } from "@tauri-apps/plugin-os";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -5,6 +12,9 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 /**
  * 渲染层已处理完未保存提示后，强制关闭当前窗口。
  * 若关闭后无剩余编辑器窗口，应用退出。
+ *
+ * @param label 目标窗口标签；省略时取当前窗口的 label
+ * @remarks 调用 Tauri command `close_discard`
  */
 export async function closeDiscard(label?: string): Promise<void> {
   const target = label ?? getCurrentWindow().label;
@@ -17,6 +27,9 @@ export async function closeDiscard(label?: string): Promise<void> {
  *
  * 注意：与 `api/window.ts::onCloseRequested` 不同——后者只做监听，不拦截。
  * 本函数会 `event.preventDefault()`，把关闭决策交给 handler。
+ *
+ * @param handler 关闭回调；接收一个 `close` 函数，调用它即执行 closeDiscard 完成关闭
+ * @returns 取消监听的函数，调用后解除 onCloseRequested 绑定
  */
 export async function interceptCloseRequest(
   handler: (close: () => Promise<void>) => Promise<void> | void
