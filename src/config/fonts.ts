@@ -1,3 +1,13 @@
+/**
+ * 字体配置。
+ *
+ * 集中定义编辑器字体相关的默认值与可选项：
+ * - 默认字体 / 字号；
+ * - 字体与字号配置项的展示元信息（label / desc）；
+ * - 字体相关的 CSS 自定义属性（变量）映射；
+ * - 字号下拉可选项。
+ * 供设置页渲染与主题应用时统一引用。
+ */
 import type {
   FontConfig,
   FontConfigItem,
@@ -6,7 +16,7 @@ import type {
   FontType,
 } from "@/types/font";
 
-// 默认字体配置
+/** 默认字体配置（编辑器正文字体与代码字体的字体族） */
 export const defaultFontConfig: FontConfig = {
   "editor-font": {
     label: "编辑器默认字体",
@@ -18,6 +28,7 @@ export const defaultFontConfig: FontConfig = {
   },
 };
 
+/** 默认字号配置（正文 / 代码 / 各级标题的默认字号） */
 export const defaultFontSizeConfig: FontSizeConfig = {
   "editor-font-size": "16px",
   "code-font-size": "16px",
@@ -29,7 +40,7 @@ export const defaultFontSizeConfig: FontSizeConfig = {
   "editor-font-size-h6": "12px",
 };
 
-// 字体配置项
+/** 字体配置项元信息（设置页用于展示标签与说明） */
 export const fontConfig: Record<FontType, FontConfigItem> = {
   "editor-font": {
     label: "编辑器字体",

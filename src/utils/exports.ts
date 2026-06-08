@@ -1,3 +1,13 @@
+/**
+ * 文档导出工具。
+ *
+ * 渲染层导出能力的统一入口，封装多种导出格式：
+ * - HTML：克隆当前编辑器 DOM、内联样式与图片，生成自包含 HTML 文件
+ * - PDF / 长图：委托 services/exports 下的实现
+ * - Word：将 Markdown 源码或渲染 DOM 解析为结构化 Block 后导出 docx
+ * - 纯文本：直接下载 Markdown 源码
+ * 同时提供定位“当前激活编辑器元素 / 选择器”的辅助方法。
+ */
 import { exportAsWord as doExportWord } from "@/services/exports/docx";
 import { exportAsPDF as doExportPDF } from "@/services/exports/pdf";
 import { exportAsImage as doExportImage } from "@/services/exports/image";
@@ -5,14 +15,26 @@ import type { DocxBlock, ExportImageOptions, ExportPDFOptions } from "@/shared/t
 
 type Block = DocxBlock;
 
+// 定位当前激活编辑器正文容器的选择器（data-active="true" 标记激活的实例）
 const ACTIVE_EDITOR_SELECTOR = '.puremark-editor-instance[data-active="true"] .puremark-container';
 
+/**
+ * 获取当前激活编辑器的正文 DOM 元素。
+ *
+ * @returns 激活编辑器的容器元素
+ * @throws 未找到激活编辑器元素时抛出错误
+ */
 export function getActiveEditorElement(): HTMLElement {
   const element = document.querySelector(ACTIVE_EDITOR_SELECTOR);
   if (!(element instanceof HTMLElement)) throw new Error("Active editor element not found");
   return element;
 }
 
+/**
+ * 获取当前激活编辑器正文容器的 CSS 选择器。
+ *
+ * @returns 选择器字符串（供 PDF / 图片导出按选择器查找元素）
+ */
 export function getActiveEditorSelector(): string {
   return ACTIVE_EDITOR_SELECTOR;
 }
@@ -155,7 +177,15 @@ function blobToDataURL(blob: Blob): Promise<string> {
   });
 }
 
-// 导出为 PDF
+/**
+ * 导出指定元素为 PDF 文件。
+ *
+ * 委托 services/exports/pdf 实现，按选择器定位元素后生成 PDF。
+ *
+ * @param elementSelector 目标元素的 CSS 选择器
+ * @param outputName 输出文件名
+ * @param options PDF 导出选项（页面尺寸、边距等）
+ */
 export async function exportElementAsPDF(
   elementSelector: string,
   outputName: string,
@@ -168,7 +198,15 @@ export async function exportElementAsPDF(
   );
 }
 
-// 导出为长图片
+/**
+ * 导出指定元素为长图片。
+ *
+ * 委托 services/exports/image 实现，将整块内容渲染为单张长图。
+ *
+ * @param elementSelector 目标元素的 CSS 选择器
+ * @param fileBaseName 输出文件基础名（不含扩展名）
+ * @param options 图片导出选项（格式、缩放等）
+ */
 export async function exportElementAsImage(
   elementSelector: string,
   fileBaseName: string,
@@ -176,11 +214,17 @@ export async function exportElementAsImage(
 ): Promise<void> {
   await doExportImage(elementSelector, fileBaseName, options);
 }
-// 导出为 Word
 
 /**
- * 遍历 Markdown 渲染后的 DOM，生成结构化数据
- * 过滤非正文节点（toolbar、控件等）
+ * 遍历 Markdown 渲染后的 DOM，生成结构化 Block 数据。
+ *
+ * 深度优先遍历指定根元素，过滤掉非正文节点（拖拽手柄、工具栏、菜单、
+ * 链接预览、行内编辑器等带特定 class 或 data-ignore 的节点），
+ * 将标题、段落、代码块（含 CodeMirror 内容）、有序 / 无序列表识别为对应 Block。
+ *
+ * @param selector 渲染容器的 CSS 选择器
+ * @returns 结构化 Block 列表
+ * @throws 未找到元素时抛出错误
  */
 export function serializeMarkdownToBlocks(selector: string): Block[] {
   const el = document.querySelector(selector);
@@ -237,13 +281,27 @@ export function serializeMarkdownToBlocks(selector: string): Block[] {
   return blocks;
 }
 
+/**
+ * 将 Markdown 源码导出为 Word（docx）文件。
+ *
+ * 先把源码解析为结构化 Block，再委托 services/exports/docx 生成文档。
+ *
+ * @param markdown Markdown 源码
+ * @param outputName 输出文件名
+ */
 export async function exportMarkdownAsWord(markdown: string, outputName: string): Promise<void> {
   const blocks = parseMarkdownToBlocks(markdown);
   await doExportWord(blocks as DocxBlock[], outputName);
 }
 
 /**
- * 将 Markdown 源码文本解析为结构化 Block 数据
+ * 将 Markdown 源码文本解析为结构化 Block 数据。
+ *
+ * 逐行扫描源码并识别块级结构：标题（最多映射到 3 级）、围栏代码块、
+ * 有序 / 无序列表（连续行合并为一个列表）、空行跳过，其余按段落处理。
+ *
+ * @param markdown Markdown 源码
+ * @returns 结构化 Block 列表
  */
 export function parseMarkdownToBlocks(markdown: string): Block[] {
   const blocks: Block[] = [];
@@ -312,7 +370,12 @@ export function parseMarkdownToBlocks(markdown: string): Block[] {
 }
 
 /**
- * 导出为纯文本文件（使用 Markdown 源码）
+ * 导出为纯文本文件（直接使用 Markdown 源码）。
+ *
+ * 将源码包成 Blob 并触发浏览器下载，下载后延迟释放对象 URL。
+ *
+ * @param markdown Markdown 源码
+ * @param outputName 输出文件名（默认 export.txt）
  */
 export function exportAsText(markdown: string, outputName: string = "export.txt"): void {
   const blob = new Blob([markdown], { type: "text/plain;charset=utf-8" });

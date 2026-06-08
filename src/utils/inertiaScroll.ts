@@ -3,33 +3,55 @@
  * 提供平滑的滚动动画和惯性滚动效果
  */
 
+/**
+ * 惯性滚动配置项。
+ * 控制 SmoothDamp 的平滑程度、速度上限与滚轮速度到滚动距离的转换。
+ */
 interface InertiaScrollConfig {
+  /** 平滑时间（秒）：越小越快收敛到目标 */
   smoothTime: number;
+  /** 最大速度限制（px/s） */
   maxSpeed: number;
+  /** 速度到距离的转换系数 */
   velocityMultiplier: number;
 }
 
+/** 滚动运行时状态 */
 interface ScrollState {
+  /** 当前滚动位置 */
   currentPosition: number;
+  /** 目标滚动位置 */
   targetPosition: number;
+  /** 当前速度（由 SmoothDamp 维护） */
   velocity: number;
+  /** 是否处于动画中 */
   isAnimating: boolean;
+  /** requestAnimationFrame 句柄 */
   animationId: number | null;
+  /** 上一帧时间戳（用于计算 deltaTime） */
   lastTime: number;
 }
 
+// 默认惯性滚动配置
 const DEFAULT_CONFIG: InertiaScrollConfig = {
   smoothTime: 0.15, // 默认平滑时间（秒）
   maxSpeed: 2000, // 默认最大速度限制
   velocityMultiplier: 0.3, // 速度到距离的转换系数
 };
 
+// 动画停止判定的阈值
 const ANIMATION_THRESHOLDS = {
   distance: 0.1, // 距离阈值
   velocity: 0.01, // 速度阈值
   closeDistance: 0.7, // 接近目标的距离阈值
 } as const;
 
+/**
+ * 惯性滚动控制器。
+ *
+ * 针对单个可横向滚动容器，提供目标定位、惯性追加速度与平滑动画，
+ * 核心使用 Unity 风格的 SmoothDamp 算法逐帧逼近目标位置。
+ */
 export class InertiaScroll {
   private container: HTMLElement;
   private config: InertiaScrollConfig;

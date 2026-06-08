@@ -1,3 +1,13 @@
+/**
+ * 自定义主题管理器。
+ *
+ * 渲染层自定义主题的状态中心，负责：
+ * - 以 localStorage（custom-themes / theme-name / editing-theme）为本地缓存层；
+ * - 通过 services/api 与 Rust userData 双向同步，实现跨窗口、可持久化；
+ * - 监听本窗口 storage 事件与其它窗口的保存 / 删除广播，保持多窗口一致；
+ * - 提供主题的增删改查、当前主题读写、编辑态暂存与变更订阅。
+ * 以默认导出对外暴露一组方法。
+ */
 import { normalizeTheme, type Theme, type ThemeName } from "@/types/theme";
 import {
   loadCustomThemes,
@@ -20,7 +30,7 @@ function notifyListeners() {
   listeners.forEach((listener) => listener(localThemes));
 }
 
-// 立即加载主题
+// 立即从 localStorage 加载主题到内存，并确保 storage 监听已注册、通知订阅者
 function loadThemes() {
   const themes = localStorage.getItem("custom-themes");
 
@@ -93,14 +103,17 @@ onCustomThemeRemoved(async () => {
   } catch {}
 }).catch(() => {});
 
+// 获取内存中的自定义主题列表
 function getThemes() {
   return localThemes;
 }
 
+// 读取当前选用的主题名（无记录时回退到 normal）
 function getCurrentLocalTheme() {
   return localStorage.getItem("theme-name") || ("normal" as ThemeName);
 }
 
+// 写入当前选用的主题名
 function setCurrentLocalTheme(theme: ThemeName) {
   localStorage.setItem("theme-name", theme);
 }
@@ -121,6 +134,9 @@ function removeTheme(name: ThemeName) {
   notifyListeners();
 }
 
+// 新增（或覆盖）一个自定义主题：
+// 若存在编辑态主题则先删除旧主题再写入（实现“编辑保存”覆盖语义），
+// 写入本地后同步到 Rust userData 并广播给其它窗口
 function addTheme(theme: Theme) {
   const normalizedTheme = normalizeTheme(theme);
 
