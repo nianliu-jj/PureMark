@@ -1,3 +1,10 @@
+/**
+ * useFont — 字体与字号配置的模块级共享状态。
+ *
+ * 负责加载系统字体列表（getSystemFonts）、读写 useConfig 中的字体/字号配置，并将其作为 CSS
+ * 变量应用到 DOM 根容器 `#fontRoot`。currentFont / currentFontSize 是基于 config 的派生
+ * computed，UI 修改后通过 setFont / setFontSize 写回配置并即时应用到样式。
+ */
 import type {
   Font,
   FontConfig,
@@ -23,6 +30,10 @@ const currentFont = computed(() => normalizeFontConfig(getConf("font").family));
 // 当前字体尺寸配置
 const currentFontSize = computed(() => getConf("font").size);
 
+/**
+ * 初始化字体模块：拉取系统字体列表填充下拉选项，归一化已存字体配置（必要时回写），
+ * 并将字体与字号应用到 DOM。出错时仅记录日志，不中断应用启动。
+ */
 async function init() {
   // 获取系统字体列表
   try {
@@ -53,11 +64,13 @@ async function init() {
   }
 }
 
+/** 设置指定类型（编辑器/代码）的字体，写回配置并立即应用到 DOM。 */
 function setFont(type: FontType, font: Font) {
   setConf("font", `family.${type}`, normalizeFont(font));
   applyFont(getConf("font").family);
 }
 
+/** 设置指定类型的字号，写回配置并立即应用到 DOM。 */
 function setFontSize(type: FontSizeType, fontSize: string) {
   setConf("font", `size.${type}`, fontSize);
   applyFontSize(getConf("font").size);
@@ -110,6 +123,10 @@ function normalizeFontConfig(fontConfig: FontConfig): FontConfig {
   };
 }
 
+/**
+ * 提供字体/字号的状态与操作。
+ * @returns fontList（系统字体选项）、currentFont、currentFontSize、fontSizeOptions 及 init/setFont/setFontSize。
+ */
 export default function useFont() {
   return {
     fontList,

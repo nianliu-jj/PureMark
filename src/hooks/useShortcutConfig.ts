@@ -1,5 +1,11 @@
 /**
- * 快捷键配置 Hook
+ * useShortcutConfig — 快捷键配置 Hook。
+ *
+ * 基于内核默认快捷键（DEFAULT_SHORTCUTS）与用户在 useConfig.shortcuts 中的自定义覆盖，
+ * 派生出完整的快捷键列表 shortcuts；并提供冲突检测（同一按键绑定多个动作）以及
+ * 单项更新 / 清除 / 重置、全部重置等写入操作（均以不可变方式回写配置）。
+ * 另导出两个工具函数：formatKeyForDisplay（ProseMirror key → 平台显示文案）、
+ * keyEventToProseMirrorKey（KeyboardEvent → ProseMirror key，用于录制快捷键）。
  */
 
 import { computed } from "vue";
@@ -7,9 +13,15 @@ import { useConfig } from "./useConfig";
 import { DEFAULT_SHORTCUTS, CATEGORY_LABELS } from "@/core";
 import type { ShortcutActionId, ShortcutDefinition } from "@/core";
 
+/**
+ * 提供快捷键的派生状态与读写操作。
+ * @returns shortcuts（合并后的完整列表）、conflicts（冲突映射）、hasConflict/getConflictLabels（冲突查询）、
+ *          updateShortcut/clearShortcut/resetShortcut/resetAll（写回配置）及 CATEGORY_LABELS（分类文案）。
+ */
 export function useShortcutConfig() {
   const { config } = useConfig();
 
+  // 解析某动作的实际按键：未自定义返回默认值，自定义为 null/空表示「已清除绑定」。
   function getResolvedKey(id: ShortcutActionId, defaultKey: string): string {
     const customKey = config.value.shortcuts?.[id];
     return customKey === undefined ? defaultKey : (customKey ?? "");

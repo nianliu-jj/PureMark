@@ -1,3 +1,13 @@
+/**
+ * useTheme — 主题系统的模块级共享状态与业务逻辑。
+ *
+ * 负责内置主题（由 src/themes/＊/theme.less 经 import.meta.glob 收集，并从已加载样式表中
+ * 提取 .theme-＊ 的 CSS 变量）与本地自定义主题（经 themeManager 持久化）的统一管理：
+ *  - 加载/合并主题列表、按名查找、应用主题（切换 <html> 上的 theme-＊ 类、注入自定义 CSS、
+ *    切换编辑器主题样式表 link），并将当前主题持久化；
+ *  - 新增/编辑/删除/导入/导出自定义主题，临时主题 tempTheme 用于主题编辑器；
+ *  - 监听 themeManager 的主题变化以同步列表，组件卸载时卸载监听。
+ */
 import type { Theme, ThemeName } from "@/types/theme";
 import autotoast from "autotoast.js";
 import { getCurrentInstance, onMounted, onUnmounted, ref, toRaw } from "vue";
@@ -25,7 +35,7 @@ const tempTheme = ref<Theme>();
 
 const themes = ref<Theme[]>([]);
 
-// 初始化主题
+// 初始化主题：读取本地当前主题名并应用
 function init() {
   // 获取本地当前应用的主题name
   currentTheme.value = getCurrentLocalTheme();
@@ -34,7 +44,8 @@ function init() {
   setTheme();
 }
 
-// 获取主题列表
+// 获取主题列表：扫描内置主题文件夹，从样式表精确匹配 .theme-<name> 规则提取 CSS 变量
+// （区分应用级与编辑器级 --crepe 变量），再合并本地自定义主题
 function getThemes() {
   // 获取文件夹
   const themes = import.meta.glob("@/themes/*/theme.less", { eager: true });
@@ -148,7 +159,7 @@ function getThemes() {
   return themeList;
 }
 
-// 根据类名获取主题
+// 根据主题名查找主题，找不到回退第一个
 function getThemeByCn(cn: ThemeName) {
   if (!themes.value.length) themes.value = getThemes();
 
@@ -159,7 +170,8 @@ function getThemeByCn(cn: ThemeName) {
   return theme;
 }
 
-// 设置主题
+// 设置/应用主题：清理启动脚本内联样式与旧 theme-* 类，自定义主题则注入 <style>，
+// 切换 <html> 的 theme-* 类与编辑器主题样式表 link，并持久化当前主题
 function setTheme(theme: ThemeName = currentTheme.value) {
   // 确保只获取一次
   if (!themes.value.length) themes.value = getThemes();
@@ -227,7 +239,7 @@ function setTheme(theme: ThemeName = currentTheme.value) {
   setCurrentLocalTheme(theme);
 }
 
-// 保存主题
+// 保存临时主题为本地主题
 function saveTheme() {
   if (!tempTheme.value) return;
 
@@ -241,7 +253,8 @@ function saveTheme() {
   // tempTheme.value = undefined
 }
 
-// 添加临时主题
+// 进入主题编辑：传入 themeName 表示编辑现有主题（存入 localStorage 供编辑器读取）；
+// 不传则基于当前主题派生一个临时自定义主题 tempTheme，然后打开主题编辑器窗口
 function addTempTheme(themeName?: ThemeName) {
   // 如果传入了主题名称，说明是编辑现有主题
   if (themeName) {
@@ -291,7 +304,7 @@ function addTempTheme(themeName?: ThemeName) {
   apiOpenThemeEditor().catch((e) => console.error("[useTheme] openThemeEditor failed:", e));
 }
 
-// 删除本地主题
+// 删除本地主题并刷新主题列表
 function removeTheme(themeName: ThemeName) {
   removeLocalTheme(themeName);
 
@@ -304,19 +317,19 @@ function getAllCssVarsDes() {
   return cssVarsDesMap;
 }
 
-// 监听本地主题变化
+// 监听本地主题变化，返回取消监听函数
 function watchLocalThemes(callback: (themes: Theme[] | null) => void) {
   return onThemesChange(callback);
 }
 
-// 同步主题列表
+// 副作用：本地主题变化时重新汇总主题列表，保持 themes 与持久化数据一致
 onThemesChange((localThemesList) => {
   if (localThemesList) {
     themes.value = getThemes();
   }
 });
 
-// 导出主题
+// 导出主题为 JSON 文件并触发下载
 function exportTheme(themeName: ThemeName) {
   const theme = getThemeByCn(themeName);
   const dataStr = JSON.stringify(theme, null, 2);
@@ -335,7 +348,7 @@ function exportTheme(themeName: ThemeName) {
   autotoast.show("导出完成", "success");
 }
 
-// 导入主题JSON
+// 导入主题 JSON：解析归一化并校验类型后加入本地主题
 function importTheme(theme: any) {
   // parse
   const themeData = normalizeTheme(JSON.parse(theme));
@@ -352,6 +365,10 @@ function importTheme(theme: any) {
   autotoast.show("导入主题完成", "success");
 }
 
+/**
+ * 主题 hook 主入口。在组件上下文中于卸载时卸载 themeManager 监听；
+ * 返回主题状态（themes/currentTheme/tempTheme/localThemes）与增删改查、监听、编辑、导入导出方法。
+ */
 export default function useTheme() {
   if (getCurrentInstance()) {
     onMounted(() => {});

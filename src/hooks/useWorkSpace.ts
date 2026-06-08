@@ -1,3 +1,15 @@
+/**
+ * useWorkSpace — 工作区（文件夹浏览）的模块级共享状态与业务逻辑。
+ *
+ * 负责工作区目录的加载、监听与文件操作：
+ *  - 加载：依据当前 Tab 的真实文件路径自动推断并加载所在目录（getWorkSpace），或用户手动选择目录
+ *    （setWorkSpace / openWorkSpaceByPath）；对 WSL/远程路径跳过自动加载并提示。
+ *  - 监听：通过 watchDirectory/onDirectoryChanged 监听目录变化并刷新；切换工作区时同步会话快照与最近打开。
+ *  - 展示：processedWorkSpace 在原始列表上叠加自然排序（目录优先、name/mtime 两种方式）、搜索过滤与
+ *    后代计数（applyDescendantCounts）。
+ *  - 文件操作：新建文件/文件夹（自动避免重名并进入重命名编辑态）、删除、重命名（同步更新已打开 Tab）。
+ *  - HMR：热更新时取消订阅并停止监听，避免重复监听。
+ */
 import toast from "autotoast.js";
 import { computed, ref, watch } from "vue";
 import {
@@ -53,6 +65,7 @@ const editingNode = ref<{ path: string; isNew: boolean } | null>(null);
 // 排序方式
 const sortBy = computed(() => config.value.workspace?.sortBy ?? "name");
 
+/** 切换排序方式（name ↔ mtime）并写回配置。 */
 function toggleSort() {
   const next = sortBy.value === "name" ? "mtime" : "name";
   setConf("workspace", {
@@ -61,6 +74,7 @@ function toggleSort() {
   });
 }
 
+// 自然排序辅助：按「小写字母→大写字母→数字→其他→空」给首字符分配优先级
 function getCharPriority(char: string | undefined): number {
   if (!char) return 4;
   if (/[a-z]/.test(char)) return 0;
@@ -125,7 +139,7 @@ function compareWorkspaceName(a: WorkSpace, b: WorkSpace): number {
   return compareNaturalName(a.name, b.name);
 }
 
-// 排序函数
+/** 排序节点：目录在前、文件在后，按 name 或 mtime 排序并递归排序子节点。 */
 function sortNodes(nodes: WorkSpace[]): WorkSpace[] {
   const dirs = nodes.filter((n) => n.isDirectory);
   const files = nodes.filter((n) => !n.isDirectory);
@@ -150,7 +164,7 @@ function sortNodes(nodes: WorkSpace[]): WorkSpace[] {
   return [...dirs, ...files];
 }
 
-// 搜索过滤函数
+/** 搜索过滤：目录始终保留，文件按名称包含查询词过滤。 */
 function filterNodes(nodes: WorkSpace[], query: string): WorkSpace[] {
   if (!query) return nodes;
   const lower = query.toLowerCase();
@@ -175,7 +189,7 @@ function countDescendants(node: WorkSpace): number {
   return node.children.reduce((total, child) => total + 1 + countDescendants(child), 0);
 }
 
-// 处理后的节点（排序 + 搜索）
+// 处理后的节点（排序 + 搜索 + 后代计数）——供 UI 渲染的派生列表
 const processedWorkSpace = computed(() => {
   if (!workSpace.value) return null;
   let result = sortNodes([...workSpace.value]);
@@ -183,7 +197,10 @@ const processedWorkSpace = computed(() => {
   return applyDescendantCounts(result);
 });
 
-// 获取文件夹
+/**
+ * 自动加载工作区目录：基于第一个有真实路径的 Tab 推断目录（或继承自 tear-off 的工作区路径），
+ * 对 WSL/远程路径跳过并提示。加载成功后开始监听目录。幂等（已加载或加载中直接返回）。
+ */
 async function getWorkSpace() {
   if (isLoadWorkSpace) return;
   if (isLoading.value) return;
@@ -225,7 +242,7 @@ async function getWorkSpace() {
   }
 }
 
-// 打开选择文件夹对话框
+/** 按指定路径打开工作区：重置状态、读取目录、开始监听。 */
 async function openWorkSpaceByPath(selectedPath: string) {
   try {
     if (!selectedPath) return false;
@@ -246,6 +263,7 @@ async function openWorkSpaceByPath(selectedPath: string) {
   }
 }
 
+/** 弹出系统选择文件夹对话框并打开所选工作区。 */
 async function setWorkSpace() {
   try {
     const result = await showOpenDialog({
@@ -262,7 +280,7 @@ async function setWorkSpace() {
   }
 }
 
-// 开始监听目录
+/** 开始监听目录：先停掉旧监听，再监听新目录并记录工作区路径、最近打开与会话快照。 */
 async function startWatching(dirPath: string) {
   if (watchedDirPath.value) {
     await unwatchDirectory();
@@ -281,7 +299,7 @@ async function startWatching(dirPath: string) {
   });
 }
 
-// 停止监听
+/** 停止监听当前工作区目录并清空相关状态、更新会话快照。 */
 async function stopWatching() {
   if (watchedDirPath.value) {
     await unwatchDirectory();
@@ -298,7 +316,7 @@ async function stopWatching() {
   }
 }
 
-// 刷新文件列表
+/** 刷新文件列表（静默，不清空，用于目录变化事件回调）。 */
 async function refreshWorkSpace() {
   if (!watchedDirPath.value) return;
   try {
@@ -311,7 +329,7 @@ async function refreshWorkSpace() {
   }
 }
 
-// 手动刷新：先清空列表再重新加载，让用户感知到刷新
+/** 手动硬刷新：先清空列表再重新加载，让用户感知到刷新动作。 */
 async function hardRefreshWorkSpace() {
   if (!watchedDirPath.value) return;
   workSpace.value = null;
@@ -325,7 +343,7 @@ async function hardRefreshWorkSpace() {
   }
 }
 
-// 监听目录变化（Rust emit workspace:directory-changed）
+// 副作用：监听目录变化事件（Rust emit workspace:directory-changed）静默刷新列表
 let unsubscribeDirChanged: (() => void) | null = null;
 onDirectoryChanged(() => refreshWorkSpace())
   .then((fn) => {
@@ -343,7 +361,10 @@ if (import.meta.hot) {
   });
 }
 
-// 文件操作
+/**
+ * 在目标目录下新建文件：自动生成不重名的 Untitled.md，创建后刷新列表并进入重命名编辑态。
+ * @returns 新文件路径，失败返回 null
+ */
 async function createFile(targetDirPath: string): Promise<string | null> {
   // 生成不冲突的文件名
   let fileName = "Untitled.md";
@@ -382,6 +403,10 @@ async function createFile(targetDirPath: string): Promise<string | null> {
   return filePath;
 }
 
+/**
+ * 在目标目录下新建文件夹：自动生成不重名的「新建文件夹」，创建后刷新列表并进入重命名编辑态。
+ * @returns 新文件夹路径，失败返回 null
+ */
 async function createFolder(targetDirPath: string): Promise<string | null> {
   // 生成不冲突的文件夹名
   let folderName = "新建文件夹";
@@ -419,6 +444,7 @@ async function createFolder(targetDirPath: string): Promise<string | null> {
   return folderPath;
 }
 
+/** 删除文件/文件夹，成功后刷新列表。 */
 async function deleteFile(filePath: string): Promise<boolean> {
   const result = await apiDeleteFile(filePath);
   if (result) {
@@ -427,6 +453,10 @@ async function deleteFile(filePath: string): Promise<boolean> {
   return result;
 }
 
+/**
+ * 重命名文件/文件夹：成功后同步更新已打开的同路径 Tab 的 filePath 与名称，并刷新列表。
+ * @returns 新路径，失败返回 null
+ */
 async function renameFile(oldPath: string, newName: string): Promise<string | null> {
   const newPath = await apiRenameFile(oldPath, newName);
   if (newPath) {
@@ -444,7 +474,7 @@ async function renameFile(oldPath: string, newName: string): Promise<string | nu
   return newPath;
 }
 
-// 监听tabs
+// 副作用：监听 tabs 变化，仅在「从无真实文件到有」时触发自动加载工作区
 watch(
   () => tabs.value,
   (newTabs) => {
@@ -465,6 +495,10 @@ watch(
   () => {}
 );
 
+/**
+ * 工作区 hook 主入口。
+ * @returns 处理后的列表 workSpace / 原始列表、搜索与排序状态、编辑态、文件增删改与刷新方法、监听路径等。
+ */
 function useWorkSpace() {
   return {
     workSpace: processedWorkSpace,

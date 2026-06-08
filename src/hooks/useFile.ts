@@ -1,3 +1,14 @@
+/**
+ * useFile — 文件级业务编排（打开 / 保存 / 另存为 / 新建 / 拖拽 / 启动打开）。
+ *
+ * 该模块是「文件操作」的业务编排层：协调 useTab（多 Tab 状态与持久化）、useContent（当前文档内容视图）、
+ * useTitle（窗口标题）与 useConfig（行尾、图片本地路径等配置），并通过 @/services/api 与 Rust 宿主交互。
+ * 同时负责注册一次性的全局副作用：
+ *  - 启动时打开文件（onOpenFileAtLaunch + notifyRendererReady，先订阅再 ready 以避免竞态）；
+ *  - 菜单快捷键（Ctrl/Cmd+O、Ctrl/Cmd+S）的 DOM keydown 监听；
+ *  - 浏览器侧拖拽事件（dragover/drop）与 Tauri 原生 onDragDropEvent 拖入文件/目录处理。
+ * 所有内容变更后均通过 mitt 广播 `file:Change`（必要时 `editor:reload`）通知编辑器刷新。
+ */
 import type { Tab } from "@/types/tab";
 // useFile.ts
 import { stat } from "@tauri-apps/plugin-fs";
@@ -21,6 +32,11 @@ import { useConfig } from "./useConfig";
 import useTab from "./useTab";
 import useTitle from "./useTitle";
 
+/**
+ * 打开文件。未传入 result 时弹出系统打开对话框；委托 useTab.openFile 走与工作区点击相同的代码路径，
+ * 并把结果同步到 useContent 与窗口标题，最后广播 file:Change。
+ * @param result 可选的已读取文件 { filePath, content }；为空则弹出对话框
+ */
 async function onOpen(result?: { filePath: string; content: string } | null) {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -49,6 +65,11 @@ async function onOpen(result?: { filePath: string; content: string } | null) {
   }
 }
 
+/**
+ * 保存当前 Tab。无文件路径时转为另存为；保存成功后回读磁盘内容以同步
+ * fileTraits / readOnly 等元信息，再刷新 useContent 与标题。
+ * @returns 是否保存成功
+ */
 async function onSave() {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -88,6 +109,11 @@ async function onSave() {
   return saved;
 }
 
+/**
+ * 另存为：弹出保存对话框（带默认目录/文件名、行尾与图片本地路径配置），写入后回读磁盘内容。
+ * 若目标路径已被其他 Tab 打开则合并到该 Tab，否则更新当前 Tab，最后广播 file:Change 与 editor:reload。
+ * @returns 是否完成另存
+ */
 async function onSaveAs() {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -142,6 +168,7 @@ async function onSaveAs() {
   return false;
 }
 
+/** 计算另存为默认目录：优先当前 Tab 所在目录，否则取当前窗口工作区路径。 */
 function getDefaultSaveDirectory(): string | undefined {
   const tab = useTab().currentTab.value;
   if (tab?.filePath) {
@@ -150,12 +177,14 @@ function getDefaultSaveDirectory(): string | undefined {
   return getWorkspacePathForWindow(currentWindowLabel()) ?? undefined;
 }
 
+/** 计算另存为默认文件名：基于当前 Tab 名，缺省 Untitled，并补全 .md 扩展名。 */
 function getDefaultSaveFileName(): string {
   const name = useTab().currentTab.value?.name?.trim() || "Untitled";
   return /\.(md|markdown)$/i.test(name) ? name : `${name}.md`;
 }
 
 // 创建新文件
+/** 新建空白文件：创建新 Tab 并清空当前内容状态，刷新标题后广播 file:Change。 */
 function createNewFile() {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -174,6 +203,7 @@ function createNewFile() {
   });
 }
 
+/** Tab 切换时把目标 Tab 的内容同步到 useContent 并刷新标题、广播 file:Change。 */
 function tabSwitch(tab: Tab) {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -189,6 +219,7 @@ function tabSwitch(tab: Tab) {
   });
 }
 
+/** 打开拖入的 Markdown 文件路径：展开大纲侧栏并以「不复用空白 Untitled」方式打开。 */
 async function openDroppedMarkdownPath(filePath: string) {
   const { openFileWithOptions } = useTab();
 
@@ -198,6 +229,7 @@ async function openDroppedMarkdownPath(filePath: string) {
   });
 }
 
+/** 浏览器侧拖拽（无真实路径）回退：用拖入的文件名与文本内容创建一个未关联磁盘路径的新 Tab。 */
 async function createTabFromDroppedFileName(name: string, content: string) {
   const { createNewTab, switchToTab } = useTab();
   const { markdown, filePath, originalContent } = useContent();
@@ -223,6 +255,10 @@ async function createTabFromDroppedFileName(name: string, content: string) {
   });
 }
 
+/**
+ * 处理拖入的一批路径：目录路径各自打开新的编辑器窗口（带工作区），Markdown 文件路径逐个在当前窗口打开。
+ * @param paths 拖入的文件/目录绝对路径列表
+ */
 async function handleDroppedPaths(paths: string[]) {
   const directoryPaths: string[] = [];
   const markdownPaths: string[] = [];
@@ -259,6 +295,11 @@ async function handleDroppedPaths(paths: string[]) {
 // 防止重复注册事件监听器
 let listenersRegistered = false;
 
+/**
+ * 文件操作 hook 主入口。返回文件相关动作与部分 Tab 能力的转发，
+ * 并在首次调用时一次性注册启动打开、菜单快捷键、拖拽等全局监听器。
+ * @returns onOpen / onSave / onSaveAs / tabSwitch / createNewFile 等动作，及转发自 useTab 的若干方法与状态。
+ */
 export default function useFile() {
   const { updateTitle } = useTitle();
   const { markdown, filePath, originalContent } = useContent();
@@ -312,7 +353,8 @@ export default function useFile() {
   if (!listenersRegistered) {
     listenersRegistered = true;
 
-    // 启动文件监听：先订阅再 ready，避免 renderer_ready 与 subscribe 之间的竞态
+    // 启动文件监听：先订阅再 ready，避免 renderer_ready 与 subscribe 之间的竞态。
+    // 回调内复用空白 Untitled 或新建 Tab，并把内容同步到 useContent；若文件已打开则切换并同步。
     (async () => {
       try {
         await onOpenFileAtLaunch(async ({ filePath: launchFilePath, content, fileTraits }) => {

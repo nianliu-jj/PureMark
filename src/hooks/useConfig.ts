@@ -1,3 +1,15 @@
+/**
+ * useConfig — 应用全局配置的模块级共享状态。
+ *
+ * 该 hook 维护一份持久化到 localStorage（key 为 `puremark-config`）的应用配置 `AppConfig`，
+ * 覆盖字体、图片粘贴/上传、外观、编辑器其他设置、Mermaid、导出、快捷键、工作区等模块。
+ * 通过 `useStorage` 自动完成响应式 ↔ localStorage 双向同步，并在序列化读取阶段执行：
+ *  - 历史 key 迁移（milkup-config → puremark-config）；
+ *  - 旧结构合并（散落在独立 localStorage key 的 image / upload 配置）；
+ *  - 缺省值合并与字段归一化（mergeAppConfig）。
+ *
+ * 对外暴露 getConf / setConf / watchConf，供各业务 hook（useFont、useWorkSpace 等）读写配置。
+ */
 import type { FontConfig, FontSizeConfig } from "@/types/font";
 import type { ImagePasteMethod, ShortcutKeyMap } from "@/core";
 import { useStorage } from "@vueuse/core";
@@ -92,6 +104,13 @@ const defaultConfig: AppConfig = {
 const APP_CONFIG_STORAGE_KEY = "puremark-config";
 const LEGACY_APP_CONFIG_STORAGE_KEYS = ["milkup-config"] as const;
 
+/**
+ * 将外部传入的局部配置与默认配置深合并，得到一份字段完整、已归一化的 AppConfig。
+ * 兼容旧字段（如 workspace.sidebarWidth 拆分为 file/outline 两个宽度），并对粘贴方式、
+ * 字体、背景透明度、启动模式等做缺省回退与取值校验。
+ * @param partial 可能不完整的历史配置或外部配置
+ * @returns 字段完整的 AppConfig
+ */
 function mergeAppConfig(partial?: Partial<AppConfig>): AppConfig {
   const imagePasteMethod =
     partial?.image?.pasteMethod === "remote" || partial?.image?.pasteMethod === "local"
@@ -159,6 +178,7 @@ function mergeAppConfig(partial?: Partial<AppConfig>): AppConfig {
   };
 }
 
+/** 将工作区背景透明度规整为 0–100 的整数，非法值回退默认值。 */
 function normalizeWorkspaceBackgroundOpacity(value: unknown): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return defaultConfig.appearance.workspaceBackgroundOpacity;
@@ -167,6 +187,7 @@ function normalizeWorkspaceBackgroundOpacity(value: unknown): number {
   return Math.min(Math.max(Math.round(value), 0), 100);
 }
 
+/** 归一化字体配置中的编辑器字体与代码字体两项。 */
 function normalizeFontConfig(fontConfig: FontConfig): FontConfig {
   return {
     "editor-font": normalizeFont(fontConfig["editor-font"]),
@@ -174,6 +195,7 @@ function normalizeFontConfig(fontConfig: FontConfig): FontConfig {
   };
 }
 
+/** 归一化单个字体项，清理其 value 中多余的分号与空白。 */
 function normalizeFont(font: FontConfig[keyof FontConfig]) {
   return {
     ...font,
@@ -204,6 +226,8 @@ function getLegacyImageConfig(): AppConfig["image"] {
   };
 }
 
+// 持久化的全局配置：useStorage 提供响应式 ref 并自动与 localStorage 双向同步。
+// 自定义 serializer 在读取时合并默认值、吸收旧结构（image/upload）并归一化。
 const config = useStorage<AppConfig>(APP_CONFIG_STORAGE_KEY, defaultConfig, localStorage, {
   serializer: {
     read: (value: string) => {
@@ -233,12 +257,22 @@ const config = useStorage<AppConfig>(APP_CONFIG_STORAGE_KEY, defaultConfig, loca
   },
 });
 
+/**
+ * 提供应用配置的读写能力。
+ * @returns
+ *  - `config`：响应式的完整配置 ref（与 localStorage 同步）。
+ *  - `getConf`：按顶层 key 读取只读配置片段。
+ *  - `setConf`：按顶层 key 写入；当传入 value(string) + pathValue 时按嵌套路径设值（不可变更新）。
+ *  - `watchConf`：深度监听某个顶层 key 的变化。
+ */
 export function useConfig() {
   return {
     config,
 
+    // 以只读形式返回某个配置片段，避免调用方直接修改响应式对象。
     getConf: <K extends keyof AppConfig>(key: K) => readonly(config.value[key]),
 
+    // 写入配置：始终生成新对象（不可变更新），支持「整段替换」与「按嵌套路径设值」两种形式。
     setConf: <K extends keyof AppConfig>(key: K, value: AppConfig[K] | string, pathValue?: any) => {
       if (typeof value === "string" && pathValue !== undefined) {
         config.value = {
@@ -250,6 +284,7 @@ export function useConfig() {
       }
     },
 
+    // 深度监听某个顶层配置 key 的变化，返回取消监听函数。
     watchConf: <K extends keyof AppConfig>(key: K, callback: (value: AppConfig[K]) => void) => {
       return watch(() => config.value[key], callback, { deep: true });
     },

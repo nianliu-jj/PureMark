@@ -1,3 +1,11 @@
+/**
+ * useUpdateDialog — 自动更新对话框的状态与交互逻辑。
+ *
+ * 管理更新弹窗可见性、更新状态（idle/downloading/downloaded/error）与下载进度，
+ * 封装与更新服务（@/services/api/update）的交互：开始下载、取消、安装重启、忽略版本等。
+ * 组件挂载时订阅下载进度与状态事件并在卸载时取消订阅；取消下载会等待状态回到 idle（带 2s 超时兜底）。
+ * 注意：组件级 hook，每次调用各自持有独立状态。
+ */
 import autotoast from "autotoast.js";
 import { onMounted, onUnmounted, ref } from "vue";
 import {
@@ -12,6 +20,11 @@ import {
 
 export type UpdateStatus = "idle" | "downloading" | "downloaded" | "error";
 
+/**
+ * 提供更新对话框的状态与处理函数。
+ * @returns 弹窗状态（isDialogVisible/updateStatus/downloadProgress）与各动作处理函数
+ *          （显隐、忽略版本、开始更新、安装重启、稍后、最小化/恢复、取消下载）。
+ */
 export function useUpdateDialog() {
   const isDialogVisible = ref(false);
   const updateStatus = ref<UpdateStatus>("idle");
@@ -24,6 +37,7 @@ export function useUpdateDialog() {
     isDialogVisible.value = false;
   }
 
+  // 取消更新：下载中则请求取消并轮询等待状态回到 idle（最多 2s），随后关闭弹窗
   async function handleCancel() {
     if (updateStatus.value === "downloading") {
       console.log("[UpdateDialog] Cancelling download...");
@@ -56,6 +70,7 @@ export function useUpdateDialog() {
     }
     hideDialog();
   }
+  // 忽略当前版本：记录到 localStorage 的 ignoredVersion，后续不再提示该版本
   function handleIgnore() {
     const updateInfo = JSON.parse(localStorage.getItem("updateInfo") || "{}");
     const version = updateInfo.version || "";
@@ -104,6 +119,7 @@ export function useUpdateDialog() {
     }
   };
 
+  // 处理更新状态事件：根据状态切换 updateStatus；下载流程外的 error 视作回到 idle 不打扰用户
   const handleUpdateStatus = (statusObj: UpdateStatusPayload) => {
     if (statusObj.status === "downloaded") {
       updateStatus.value = "downloaded";
