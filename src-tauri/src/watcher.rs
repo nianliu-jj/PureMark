@@ -100,11 +100,13 @@ pub async fn start_directory_watch(app: AppHandle, dir: PathBuf) -> AppResult<()
 }
 
 pub async fn stop_directory_watch() {
+    // 丢弃 debouncer 即停止底层 watcher 线程，并清空记录的路径。
     let mut state = DIR_WATCHER.lock().await;
     state.debouncer = None;
     state.path = None;
 }
 
+/// 判断 notify 事件是否值得通知前端：只关心增、删、改，忽略 Access 等噪声事件。
 fn is_actionable_event(kind: &EventKind) -> bool {
     matches!(
         kind,

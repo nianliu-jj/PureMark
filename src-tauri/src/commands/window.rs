@@ -8,6 +8,7 @@ use crate::error::{AppError, AppResult};
 use crate::tearoff::TearOffTabData;
 use crate::window_manager::{self, WindowInitState};
 
+/// `create_editor_window` 的入参：窗口位置/尺寸、可选携带的标签数据与初始状态、是否抢焦点。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateEditorWindowArgs {
@@ -26,12 +27,18 @@ pub struct CreateEditorWindowArgs {
     pub fast_create: bool,
 }
 
+/// 创建编辑器窗口返回值：新窗口的唯一 label。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatedWindow {
     pub label: String,
 }
 
+/// 运行时创建一个新的编辑器窗口（无边框透明），并登记到 `window_manager`。
+///
+/// 副作用：暂存待消费的 tab_data / init_state、注册销毁回调以自动 untrack、
+/// 同步设置位置后再显示（规避多屏跳屏），按 `fast_create` 决定是否抢焦点。
+/// 返回新窗口 label。
 #[tauri::command]
 pub async fn create_editor_window(
     app: AppHandle,
@@ -89,6 +96,7 @@ pub async fn create_editor_window(
     Ok(CreatedWindow { label })
 }
 
+/// 取出并消费指定窗口的待初始化状态（新窗口 renderer 就绪后调用，仅能取一次）。
 #[tauri::command]
 pub async fn get_window_init_state(
     _app: AppHandle,
@@ -97,6 +105,7 @@ pub async fn get_window_init_state(
     Ok(window_manager::consume_pending_window_init_state(&label))
 }
 
+/// 窗口外框的屏幕坐标与尺寸。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowBounds {
@@ -106,6 +115,7 @@ pub struct WindowBounds {
     pub height: u32,
 }
 
+/// 获取指定窗口的外框边界（位置 + 尺寸），窗口不存在时返回 `None`。
 #[tauri::command]
 pub async fn get_window_bounds(app: AppHandle, label: String) -> AppResult<Option<WindowBounds>> {
     let Some(win) = app.get_webview_window(&label) else {
@@ -125,12 +135,14 @@ pub async fn get_window_bounds(app: AppHandle, label: String) -> AppResult<Optio
     }))
 }
 
+/// 更新指定窗口的保存状态（供关闭确认判断是否需要弹框）。
 #[tauri::command]
 pub async fn change_save_status(_app: AppHandle, label: String, is_saved: bool) -> AppResult<()> {
     window_manager::set_window_save_state(&label, is_saved);
     Ok(())
 }
 
+/// 更新指定窗口当前打开的文件集合，刷新跨窗口文件去重索引。
 #[tauri::command]
 pub async fn update_window_open_files_cmd(
     _app: AppHandle,

@@ -19,6 +19,7 @@ use crate::image::{
 };
 use crate::markdown_file::read_markdown_file;
 
+/// 读取 Markdown 文件的返回结果：规范化路径、归一化内容、原始格式特征。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReadFileResult {
@@ -27,6 +28,9 @@ pub struct ReadFileResult {
     pub file_traits: FileTraits,
 }
 
+/// 按路径读取 Markdown 文件并归一化内容。非 Markdown/不存在时返回 `None`。
+///
+/// 读盘为阻塞操作，放入 `spawn_blocking` 执行。
 #[tauri::command]
 pub async fn read_file_by_path(file_path: String) -> AppResult<Option<ReadFileResult>> {
     let out = tokio::task::spawn_blocking(move || read_markdown_file(&file_path))
@@ -40,6 +44,7 @@ pub async fn read_file_by_path(file_path: String) -> AppResult<Option<ReadFileRe
     }))
 }
 
+/// 判断文件是否为只读（用于决定是否禁用编辑）。读取元数据失败时保守返回 `false`。
 #[tauri::command]
 pub async fn is_read_only(file_path: String) -> AppResult<bool> {
     let result = tokio::task::spawn_blocking(move || {
@@ -55,6 +60,7 @@ pub async fn is_read_only(file_path: String) -> AppResult<bool> {
     }
 }
 
+/// `write_temp_image` 的入参：图片字节、目标目录配置、当前文件路径、原文件名、MIME 类型。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WriteTempImageArgs {
@@ -65,6 +71,10 @@ pub struct WriteTempImageArgs {
     pub mime_type: Option<String>,
 }
 
+/// 将粘贴/拖入的图片字节写入磁盘，并返回可写入 Markdown 的图片路径。
+///
+/// 副作用：按配置解析目标目录（必要时创建）、生成无冲突文件名、写入图片文件。
+/// 返回：相对或绝对的图片引用路径（取决于目录配置）。
 #[tauri::command]
 pub async fn write_temp_image(app: AppHandle, args: WriteTempImageArgs) -> AppResult<String> {
     let user_data_dir = app
@@ -100,6 +110,7 @@ pub async fn write_temp_image(app: AppHandle, args: WriteTempImageArgs) -> AppRe
     result
 }
 
+/// 清理内容中引用的、位于应用临时目录下的本地图片（关闭文档时回收未落盘的临时图片）。
 #[tauri::command]
 pub async fn cleanup_local_images(app: AppHandle, content: String) -> AppResult<()> {
     let user_data_dir = app
@@ -113,6 +124,7 @@ pub async fn cleanup_local_images(app: AppHandle, content: String) -> AppResult<
     Ok(())
 }
 
+/// `save_file` 的入参：目标路径、内容、原格式特征、默认换行风格、图片本地目录配置。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFileArgs {
@@ -123,6 +135,7 @@ pub struct SaveFileArgs {
     pub image_local_path: Option<String>,
 }
 
+/// 保存结果：最终写入的文件路径，以及临时图片迁移后回写到编辑器的内容。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFileResult {
@@ -130,6 +143,10 @@ pub struct SaveFileResult {
     pub content: String,
 }
 
+/// 保存文件到指定路径：迁移临时图片 → 按 traits 还原格式 → 写盘。
+///
+/// 副作用：可能创建图片目录、移动/删除临时图片、覆盖目标文件。
+/// 返回内容为图片相对化后的最新内容，供前端同步编辑器状态。
 #[tauri::command]
 pub async fn save_file(app: AppHandle, args: SaveFileArgs) -> AppResult<SaveFileResult> {
     let user_data_dir = app
@@ -166,6 +183,10 @@ pub async fn save_file(app: AppHandle, args: SaveFileArgs) -> AppResult<SaveFile
     out
 }
 
+/// 将文件移动到目标目录（保留原文件名）。
+///
+/// 校验源为文件、目标为目录、目标不存在同名文件后用 `rename` 移动；
+/// 源与目标相同时直接返回。返回移动后的新路径。
 #[tauri::command]
 pub async fn move_file_to_directory(file_path: String, target_dir: String) -> AppResult<String> {
     let out: AppResult<String> = tokio::task::spawn_blocking(move || {

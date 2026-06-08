@@ -6,6 +6,10 @@
 
 use crate::error::AppResult;
 
+/// 读取系统剪贴板中的文件路径列表（用于「粘贴图片/文件」场景）。
+///
+/// 平台差异由下方各 `read_clipboard_files` 实现处理；读取阻塞操作放入 `spawn_blocking`。
+/// 返回：剪贴板中的文件绝对路径列表，无文件时返回空数组。
 #[tauri::command]
 pub async fn get_file_path_in_clipboard() -> AppResult<Vec<String>> {
     tokio::task::spawn_blocking(read_clipboard_files)
@@ -13,6 +17,7 @@ pub async fn get_file_path_in_clipboard() -> AppResult<Vec<String>> {
         .map_err(|e| anyhow::anyhow!(e))?
 }
 
+/// Windows 实现：从 CF_HDROP 剪贴板格式读取文件列表。
 #[cfg(target_os = "windows")]
 fn read_clipboard_files() -> AppResult<Vec<String>> {
     use clipboard_win::{Clipboard, Getter, formats};
@@ -33,6 +38,7 @@ fn read_clipboard_files() -> AppResult<Vec<String>> {
     Ok(list)
 }
 
+/// macOS 实现：通过 NSPasteboard 读取 `NSURL` 类型对象的文件路径。
 #[cfg(target_os = "macos")]
 fn read_clipboard_files() -> AppResult<Vec<String>> {
     use cocoa::appkit::NSPasteboard;
@@ -69,6 +75,7 @@ fn read_clipboard_files() -> AppResult<Vec<String>> {
     }
 }
 
+/// 其他平台（如 Linux）实现：暂不支持，返回空列表。
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn read_clipboard_files() -> AppResult<Vec<String>> {
     Ok(Vec::new())

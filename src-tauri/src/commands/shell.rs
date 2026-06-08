@@ -18,15 +18,18 @@ use crate::window_manager;
 static URL_SCHEME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z\d+\-.]*:").unwrap());
 static WIN_DRIVE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[a-zA-Z]:[\\/]").unwrap());
 
+/// 判断 target 是否带 URI scheme（如 `https:`），同时排除 Windows 盘符（`C:\`）误判。
 fn has_uri_scheme(target: &str) -> bool {
     URL_SCHEME_RE.is_match(target) && !WIN_DRIVE_RE.is_match(target)
 }
 
+/// 判断是否为外部链接：协议相对（`//`）或带非 `file:` 的 scheme。
 fn is_external_link(target: &str) -> bool {
     target.starts_with("//")
         || (has_uri_scheme(target) && !target.to_lowercase().starts_with("file:"))
 }
 
+/// 规范化外部链接：协议相对补 `https:`，无 scheme 的裸地址补 `https://`，其余原样返回。
 fn normalize_external(target: &str) -> String {
     let trimmed = target.trim();
     if trimmed.starts_with("//") {
@@ -38,6 +41,8 @@ fn normalize_external(target: &str) -> String {
     }
 }
 
+/// 将链接解析为本地文件路径：处理 `file:` URL、绝对路径，以及相对当前文件目录的相对路径。
+/// 锚点链接、空链接、外部链接返回 `None`。
 fn resolve_local_link(target: &str, current_file_path: Option<&str>) -> Option<PathBuf> {
     let trimmed = target.trim();
     if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -71,6 +76,7 @@ fn resolve_local_link(target: &str, current_file_path: Option<&str>) -> Option<P
     Some(parent.join(clean))
 }
 
+/// `open_link` 的入参：被点击的链接 href，以及当前文件路径（用于解析相对链接）。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenLinkArgs {
@@ -78,6 +84,7 @@ pub struct OpenLinkArgs {
     pub current_file_path: Option<String>,
 }
 
+/// `open_link` 的处理结果，区分外链、内部 Markdown、跨窗口聚焦、其他本地文件与无操作。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum OpenLinkResult {
@@ -98,6 +105,10 @@ pub enum OpenLinkResult {
     Noop,
 }
 
+/// 智能打开链接：本地 Markdown 优先在应用内打开（命中其他窗口已开则聚焦该窗口并激活对应 Tab），
+/// 其他本地文件交系统默认程序，外链用系统浏览器打开。
+///
+/// 副作用：可能 emit `tab:activate-file`、聚焦目标窗口、调用系统 opener。
 #[tauri::command]
 pub async fn open_link(
     app: AppHandle,
@@ -158,6 +169,7 @@ pub async fn open_link(
     Ok(OpenLinkResult::External { url })
 }
 
+/// 用系统默认浏览器打开外部 URL（规范化后再打开）。
 #[tauri::command]
 pub async fn open_external(app: AppHandle, url: String) -> AppResult<()> {
     let normalized = normalize_external(&url);
@@ -167,6 +179,7 @@ pub async fn open_external(app: AppHandle, url: String) -> AppResult<()> {
     Ok(())
 }
 
+/// 在系统文件管理器中定位并选中指定文件（Windows explorer / macOS Finder / Linux xdg-open）。
 #[tauri::command]
 pub async fn reveal_file_in_folder(file_path: String) -> AppResult<()> {
     let path = PathBuf::from(&file_path);

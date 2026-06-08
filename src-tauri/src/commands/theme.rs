@@ -14,12 +14,14 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 use crate::error::{AppError, AppResult};
 use crate::theme_store::{ThemeFile, load, remove_theme, save, upsert_theme};
 
+/// 解析应用 userData 目录（themes.json 等持久化文件的所在目录）。
 fn user_data_dir(app: &AppHandle) -> AppResult<std::path::PathBuf> {
     app.path()
         .app_data_dir()
         .map_err(|e| AppError::Other(anyhow::anyhow!("resolve userData dir: {e}")))
 }
 
+/// 一次性读取全部自定义主题及当前主题名（前端冷启动调用）。
 #[tauri::command]
 pub async fn load_custom_themes(app: AppHandle) -> AppResult<ThemeFile> {
     let dir = user_data_dir(&app)?;
@@ -28,6 +30,7 @@ pub async fn load_custom_themes(app: AppHandle) -> AppResult<ThemeFile> {
         .map_err(|e| anyhow::anyhow!(e))?
 }
 
+/// 新增或更新一条自定义主题并持久化，随后向所有窗口广播 `custom-theme-saved`。
 #[tauri::command]
 pub async fn save_custom_theme(app: AppHandle, theme: JsonValue) -> AppResult<()> {
     let dir = user_data_dir(&app)?;
@@ -49,6 +52,7 @@ pub async fn save_custom_theme(app: AppHandle, theme: JsonValue) -> AppResult<()
     Ok(())
 }
 
+/// 按名称删除自定义主题，删除成功后广播 `custom-theme-removed`。返回是否真的删除了。
 #[tauri::command]
 pub async fn remove_custom_theme(app: AppHandle, name: String) -> AppResult<bool> {
     let dir = user_data_dir(&app)?;
@@ -71,12 +75,14 @@ pub async fn remove_custom_theme(app: AppHandle, name: String) -> AppResult<bool
     Ok(removed)
 }
 
+/// `set_current_theme` 的入参：要设为当前的主题名。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetCurrentThemeArgs {
     pub name: String,
 }
 
+/// 持久化当前选中的主题名。
 #[tauri::command]
 pub async fn set_current_theme(app: AppHandle, args: SetCurrentThemeArgs) -> AppResult<()> {
     let dir = user_data_dir(&app)?;
@@ -92,6 +98,7 @@ pub async fn set_current_theme(app: AppHandle, args: SetCurrentThemeArgs) -> App
     Ok(())
 }
 
+/// 读取当前选中的主题名（无则返回 `None`）。
 #[tauri::command]
 pub async fn get_current_theme(app: AppHandle) -> AppResult<Option<String>> {
     let dir = user_data_dir(&app)?;
@@ -105,6 +112,7 @@ pub async fn get_current_theme(app: AppHandle) -> AppResult<Option<String>> {
 
 const THEME_EDITOR_LABEL: &str = "theme-editor";
 
+/// 打开主题编辑器窗口：已存在则聚焦，否则运行时创建一个无边框透明的 WebviewWindow。
 #[tauri::command]
 pub async fn open_theme_editor(app: AppHandle) -> AppResult<()> {
     if let Some(existing) = app.get_webview_window(THEME_EDITOR_LABEL) {
@@ -131,12 +139,14 @@ pub async fn open_theme_editor(app: AppHandle) -> AppResult<()> {
     Ok(())
 }
 
+/// 主题编辑器窗口控制入参：动作为 minimize / maximize / close 之一。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WindowControlArgs {
     pub action: String, // "minimize" | "maximize" | "close"
 }
 
+/// 对主题编辑器窗口执行最小化/最大化切换/关闭操作（因其无系统边框需自绘控件触发）。
 #[tauri::command]
 pub async fn theme_editor_window_control(
     app: AppHandle,

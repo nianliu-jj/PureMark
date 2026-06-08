@@ -47,6 +47,7 @@ pub async fn open_file(app: AppHandle) -> AppResult<Option<ReadFileResult>> {
     }))
 }
 
+/// `save_file_as` 的入参：内容、原文件格式特征、默认换行风格、图片本地目录、默认保存路径与文件名。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFileAsArgs {
@@ -159,6 +160,7 @@ pub async fn show_close_confirm(app: AppHandle, file_name: String) -> AppResult<
     if discard { Ok(1) } else { Ok(0) }
 }
 
+/// `show_open_dialog` 的入参：标题、默认路径、文件类型过滤器、是否选目录、是否多选。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenDialogOptions {
@@ -171,6 +173,7 @@ pub struct OpenDialogOptions {
     pub multiple: bool,
 }
 
+/// 文件类型过滤器：显示名 + 扩展名列表。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenDialogFilter {
@@ -178,6 +181,7 @@ pub struct OpenDialogFilter {
     pub extensions: Vec<String>,
 }
 
+/// 打开对话框结果：是否被用户取消，以及选中的路径列表。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenDialogResult {
@@ -185,6 +189,9 @@ pub struct OpenDialogResult {
     pub file_paths: Vec<String>,
 }
 
+/// 通用打开对话框：按 `options` 选择文件或目录、单选或多选，返回选中路径。
+///
+/// 调用 Tauri dialog 插件的阻塞式选择 API，用户取消时 `canceled = true`。
 #[tauri::command]
 pub async fn show_open_dialog(
     app: AppHandle,
@@ -236,6 +243,7 @@ pub async fn show_open_dialog(
     }
 }
 
+/// 把 Tauri `FilePath`（可能是本地路径或 URL）统一转为字符串。
 fn file_path_to_string(fp: FilePath) -> String {
     match fp {
         FilePath::Path(p) => p.to_string_lossy().into_owned(),

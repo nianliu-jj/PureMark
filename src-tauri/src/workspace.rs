@@ -24,6 +24,7 @@ static IGNORE_PATTERNS: Lazy<Regex> = Lazy::new(|| {
 
 static MD_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\.(?:md|markdown)$").unwrap());
 
+/// 工作区文件树节点：文件或目录，目录时 `children` 携带子节点。
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceNode {
@@ -35,14 +36,17 @@ pub struct WorkspaceNode {
     pub children: Option<Vec<WorkspaceNode>>,
 }
 
+/// 判断目录名是否应被忽略（版本控制、IDE 配置、构建产物等）。
 fn should_ignore_directory(name: &str) -> bool {
     IGNORE_PATTERNS.is_match(name)
 }
 
+/// 判断文件名是否为 Markdown（`.md` / `.markdown`，忽略大小写）。
 fn is_markdown(name: &str) -> bool {
     MD_EXT_RE.is_match(name)
 }
 
+/// 读取文件修改时间并转为毫秒时间戳；失败时回退为 0。
 fn mtime_millis(path: &Path) -> i64 {
     std::fs::metadata(path)
         .and_then(|m| m.modified())
@@ -52,6 +56,8 @@ fn mtime_millis(path: &Path) -> i64 {
         .unwrap_or(0)
 }
 
+/// 计算首字符的排序优先级：小写字母 > 大写字母 > 数字 > 其他符号 > 空。
+/// 数值越小越靠前，与原 TS 排序规则保持一致。
 fn char_priority(ch: Option<char>) -> u8 {
     match ch {
         Some(c) if c.is_ascii_lowercase() => 0,
@@ -62,6 +68,8 @@ fn char_priority(ch: Option<char>) -> u8 {
     }
 }
 
+/// 把名称按「数字段 / 非数字段」交替切分，作为自然排序的比较单元。
+/// 例如 "a10b2" → ["a", "10", "b", "2"]，使 "a2" 排在 "a10" 之前。
 fn split_natural_tokens(name: &str) -> Vec<&str> {
     let mut tokens = Vec::new();
     let mut start = 0usize;
@@ -89,6 +97,7 @@ fn split_natural_tokens(name: &str) -> Vec<&str> {
     tokens
 }
 
+/// 逐字符比较文本段：先按字符优先级，再忽略大小写比较，最后按原始码位定序。
 fn compare_text_token(a: &str, b: &str) -> Ordering {
     let mut a_chars = a.chars();
     let mut b_chars = b.chars();
@@ -120,6 +129,7 @@ fn compare_text_token(a: &str, b: &str) -> Ordering {
     }
 }
 
+/// 按数值大小比较数字段：先去前导零，再比有效位数、字典序，最后用原始长度定序（前导零兜底）。
 fn compare_number_token(a: &str, b: &str) -> Ordering {
     let a_trim = a.trim_start_matches('0');
     let b_trim = b.trim_start_matches('0');
@@ -133,6 +143,7 @@ fn compare_number_token(a: &str, b: &str) -> Ordering {
         .then_with(|| a.len().cmp(&b.len()))
 }
 
+/// 文件/目录名的完整自然排序比较：先比首字符优先级，再逐段比较（数字段按数值、文本段按文本）。
 fn compare_name(a: &str, b: &str) -> Ordering {
     let leading = char_priority(a.chars().next()).cmp(&char_priority(b.chars().next()));
     if leading != Ordering::Equal {

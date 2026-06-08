@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
 
+/// themes.json 的持久化结构：自定义主题列表 + 当前选中主题名。
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ThemeFile {
@@ -18,6 +19,7 @@ pub struct ThemeFile {
     pub current: Option<String>,
 }
 
+/// 计算 themes.json 在 userData 目录下的完整路径。
 pub fn themes_json_path(user_data_dir: &Path) -> PathBuf {
     user_data_dir.join("themes.json")
 }

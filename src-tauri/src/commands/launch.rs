@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::file_format::FileTraits;
 use crate::markdown_file::{is_markdown_file_path, read_markdown_file};
 
+/// 启动时打开文件事件 `open-file-at-launch` 的载荷：路径、内容、格式特征。
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenFileAtLaunchPayload {
@@ -46,7 +47,7 @@ pub fn enqueue_launch_file(path: &str) {
     *PENDING.lock().unwrap() = Some(path.to_string());
 }
 
-/// 前端 ready 时调用。若有 pending，立即读取并 emit。
+/// 通知前端已 ready：标记 ready 状态，若此前有 pending 的启动文件则立即读取并 emit。
 #[tauri::command]
 pub async fn renderer_ready(app: AppHandle) -> crate::error::AppResult<()> {
     *RENDERER_READY.lock().unwrap() = true;
@@ -57,6 +58,9 @@ pub async fn renderer_ready(app: AppHandle) -> crate::error::AppResult<()> {
     Ok(())
 }
 
+/// 读取指定 Markdown 文件并向主窗口 emit `open-file-at-launch` 事件。
+///
+/// 读盘放入 `spawn_blocking`；文件不可读时仅记录告警并静默返回。
 pub async fn emit_open_file(app: &AppHandle, path: &str) -> crate::error::AppResult<()> {
     let path_owned = path.to_string();
     let out = tokio::task::spawn_blocking(move || read_markdown_file(&path_owned))
@@ -80,6 +84,7 @@ pub async fn emit_open_file(app: &AppHandle, path: &str) -> crate::error::AppRes
     Ok(())
 }
 
+/// 查询 renderer 是否已就绪（用于 macOS RunEvent 中决定是否立即 emit）。
 #[allow(dead_code)]
 pub fn is_renderer_ready() -> bool {
     *RENDERER_READY.lock().unwrap()

@@ -1,3 +1,9 @@
+//! 库 crate 根模块：负责整个 Tauri 桌面应用的装配与启动。
+//!
+//! 职责包括：声明各功能模块、注册全部 `#[tauri::command]`、初始化日志、
+//! 安装 Tauri 插件（shell/os/fs/dialog/clipboard/opener/single-instance）、
+//! 配置单实例与 macOS 文件打开事件路由，并登记主窗口到 `window_manager`。
+
 mod commands;
 mod error;
 mod file_format;
@@ -42,12 +48,18 @@ use commands::workspace::{
     watch_directory, watch_files, workspace_exists,
 };
 
+/// 连通性自检 command：原样回显名称，用于验证前后端 IPC 通道是否正常。
 #[tauri::command]
 async fn ping(name: &str) -> AppResult<String> {
     tracing::info!(name = %name, "ping called");
     Ok(format!("pong: {name}"))
 }
 
+/// 应用启动入口：初始化日志、捕获命令行文件参数、装配 Tauri Builder
+/// （插件 + command + 单实例 + setup + 运行事件循环）并运行直至退出。
+///
+/// 关键副作用：注册全局单实例处理、登记主窗口跟踪、处理 macOS 通过
+/// 文件关联或 dock 重新打开应用的事件。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> anyhow::Result<()> {
     fmt()
@@ -76,7 +88,8 @@ pub fn run() -> anyhow::Result<()> {
 
             use crate::markdown_file::is_markdown_file_path;
 
-            // 从 argv 里找第一个 .md/.markdown 参数
+            // 第二个实例被唤起时（如双击 .md 文件），从其 argv 里找第一个 Markdown 路径，
+            // 规范化为绝对路径后交由当前实例打开，从而保证全局单实例语义。
             let md_path = argv.iter().skip(1).find_map(|a| {
                 if is_markdown_file_path(a) {
                     Some(
@@ -179,6 +192,8 @@ pub fn run() -> anyhow::Result<()> {
             #[cfg(target_os = "macos")]
             {
                 use tauri::Manager;
+                // macOS 通过 Finder 双击或文件关联打开文档时不会重启进程，而是触发 Opened 事件；
+                // 这里把文件入队，renderer 就绪后再 emit 打开，避免早于前端初始化丢事件。
                 if let tauri::RunEvent::Opened { urls } = &event {
                     for url in urls {
                         if let Ok(path) = url.to_file_path() {
@@ -201,6 +216,7 @@ pub fn run() -> anyhow::Result<()> {
                     ..
                 } = &event
                 {
+                    // 点击 dock 图标重新激活应用时，若已无可见窗口则重新显示并聚焦主窗口。
                     if !*has_visible_windows {
                         if let Some(win) =
                             app_handle.get_webview_window(crate::window_manager::MAIN_LABEL)

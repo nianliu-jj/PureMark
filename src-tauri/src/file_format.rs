@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+/// 文件换行符风格：Windows 的 CRLF（`\r\n`）或 Unix 的 LF（`\n`）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LineEnding {
@@ -15,6 +16,7 @@ pub enum LineEnding {
     Lf,
 }
 
+/// 文件原始格式特征，用于保存时无损还原（BOM、换行风格、末尾换行）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileTraits {
@@ -42,6 +44,7 @@ pub fn normalize_markdown(text: &str) -> String {
     without_bom.replace("\r\n", "\n")
 }
 
+/// 将内容统一规整为 LF 后，再按目标换行风格转换（CRLF 时把每个 `\n` 换回 `\r\n`）。
 fn apply_line_ending(content: &str, line_ending: LineEnding) -> String {
     let normalized = content.replace("\r\n", "\n");
     if matches!(line_ending, LineEnding::Crlf) {
@@ -113,6 +116,10 @@ static BASE64_PADDING_RE: Lazy<Regex> =
 
 static FILE_EXT_TAIL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.\w+$").unwrap());
 
+/// 从历史协议 URL 的内容片段中尽力提取出真实相对路径。
+///
+/// 兼容三种旧格式：base64 填充后跟路径、含 `/./` 的路径、以及末尾带文件扩展名的片段。
+/// 无法识别时返回 `None`，调用方会保留原始 URL 不动。
 fn extract_relative_path(url_content: &str) -> Option<String> {
     if let Some(caps) = BASE64_PADDING_RE.captures(url_content) {
         return Some(caps[1].to_string());

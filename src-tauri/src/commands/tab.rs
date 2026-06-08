@@ -1,4 +1,8 @@
 //! Tab 级 commands：tear-off / 合并 / 跨窗口去重 / 初始数据 / 单 Tab 拖拽。
+//!
+//! 拖拽跟随的核心机制：在后台 tokio 任务里以约 60fps 轮询全局鼠标位置，
+//! 让跟随窗口贴住光标，并对其他窗口做 hit-test 以触发「合并预览」高亮，
+//! 拖拽结束时根据是否命中目标窗口决定「合并到目标」或「保留为独立窗口」。
 
 use std::time::Duration;
 
@@ -17,6 +21,7 @@ use crate::window_manager::{
 
 // ─── M2 已有：初始数据 + 跨窗口文件去重 ─────────────────
 
+/// 取出新窗口待消费的 tear-off 标签初始数据；若该标签为已修改状态，同步标记窗口为未保存。
 #[tauri::command]
 pub async fn tab_get_init_data(
     _app: AppHandle,
@@ -31,12 +36,16 @@ pub async fn tab_get_init_data(
     Ok(data)
 }
 
+/// `file_focus_if_open` 的结果：是否在其他窗口找到了该文件。
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FocusResult {
     pub found: bool,
 }
 
+/// 跨窗口文件去重：若指定文件已在其他窗口打开，则聚焦该窗口并激活对应 Tab，返回是否命中。
+///
+/// 副作用：命中时 emit `tab:activate-file` 并 `set_focus` 目标窗口。
 #[tauri::command]
 pub async fn file_focus_if_open(
     app: AppHandle,
@@ -61,6 +70,7 @@ pub async fn file_focus_if_open(
 
 // ─── 内部工具：hit-test + 合并预览维护 ────────────────────
 
+/// 命中测试：在所有编辑器窗口中找出包含给定屏幕坐标、且不在排除列表中的窗口 label。
 fn hit_test_target(
     app: &AppHandle,
     screen_x: i32,
@@ -91,6 +101,8 @@ fn hit_test_target(
     None
 }
 
+/// 维护合并预览高亮：目标窗口变化时向旧目标发 cancel、向新目标发 preview，
+/// 目标未变时仅发 update 跟随光标。记录当前 source→target 映射供拖拽结束时复用。
 fn update_merge_preview(
     app: &AppHandle,
     source_label: &str,
@@ -124,6 +136,7 @@ fn update_merge_preview(
 
 // ─── M3：多 Tab tear-off ──────────────────────────────────
 
+/// `tab_tear_off_start` 的入参：被拖出的标签数据、光标屏幕坐标、光标到窗口偏移、来源窗口。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TearOffStartArgs {
@@ -136,6 +149,10 @@ pub struct TearOffStartArgs {
     pub source_label: String,
 }
 
+/// 开始多 Tab tear-off：立即创建一个跟随光标的新窗口承载被拖出的标签，
+/// 并启动后台轮询任务持续更新窗口位置与合并预览，直到拖拽结束。
+///
+/// 副作用：创建编辑器窗口、设置全局拖拽跟随状态、spawn 轮询任务（命中目标时隐藏跟随窗口）。
 #[tauri::command]
 pub async fn tab_tear_off_start(app: AppHandle, args: TearOffStartArgs) -> AppResult<bool> {
     drag_follow_set_running(false);

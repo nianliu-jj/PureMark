@@ -39,18 +39,21 @@ fn trim_trailing_separators(input: &str) -> String {
     s
 }
 
+/// 规范化用户/系统传入的 Markdown 路径：去空白、去包裹引号、去末尾分隔符。
 pub fn normalize_markdown_file_path(input: &str) -> String {
     let trimmed = input.trim();
     let without_quotes = strip_wrapping_quotes(trimmed);
     trim_trailing_separators(without_quotes)
 }
 
+/// 判断路径是否为 Markdown 文件（按 `.md` / `.markdown` 扩展名，忽略大小写）。
 pub fn is_markdown_file_path(input: &str) -> bool {
     let normalized = normalize_markdown_file_path(input);
     let lower = normalized.to_lowercase();
     lower.ends_with(".md") || lower.ends_with(".markdown")
 }
 
+/// `read_markdown_file` 的读取结果：规范化后的绝对路径、归一化内容、原始格式特征。
 #[derive(Debug)]
 pub struct ReadMarkdownOutput {
     pub file_path: PathBuf,

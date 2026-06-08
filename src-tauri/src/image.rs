@@ -41,6 +41,7 @@ pub fn normalize_relative_image_directory(input: &str) -> String {
 
 // ── 图片保存目录解析 ─────────────────────────────────────────────
 
+/// 图片保存目录解析结果：最终绝对目录，以及该目录是否为「相对型」（相对 Markdown 文件锚定）。
 #[derive(Debug, Clone)]
 pub struct ImageSaveDirectory {
     pub absolute_dir: PathBuf,
@@ -135,6 +136,10 @@ fn pathdiff(target: &Path, base: &Path) -> Option<PathBuf> {
     }
 }
 
+/// 判断给定图片路径是否落在应用临时目录（userData）内。
+///
+/// 用于区分「需要随保存迁移并清理的临时图片」与用户自己的本地图片，
+/// 先 `canonicalize` 消除符号链接/相对成分再做前缀比较。
 pub fn is_app_temp_image_path(image_path: &Path, user_data_dir: &Path) -> bool {
     let img = image_path
         .canonicalize()
@@ -147,6 +152,7 @@ pub fn is_app_temp_image_path(image_path: &Path, user_data_dir: &Path) -> bool {
 
 // ── 文件名生成 ────────────────────────────────────────────────
 
+/// 根据原文件名扩展名或 MIME 类型推断输出图片扩展名，二者都缺失时回退为 `.png`。
 fn image_output_extension(file_name: Option<&str>, mime_type: Option<&str>) -> &'static str {
     if let Some(name) = file_name {
         let ext = Path::new(name)

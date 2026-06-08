@@ -18,6 +18,7 @@ use crate::error::{AppError, AppResult};
 use crate::watcher::{start_directory_watch, stop_directory_watch, sync_file_watches};
 use crate::workspace::{WorkspaceNode, scan_directory};
 
+/// 递归扫描目录，返回排序后的工作区文件树。目录为空或不存在时返回空列表。
 #[tauri::command]
 pub async fn get_directory_files(dir_path: String) -> AppResult<Vec<WorkspaceNode>> {
     if dir_path.is_empty() {
@@ -33,6 +34,7 @@ pub async fn get_directory_files(dir_path: String) -> AppResult<Vec<WorkspaceNod
     Ok(out)
 }
 
+/// 判断工作区目录是否存在（路径为空时返回 false）。
 #[tauri::command]
 pub async fn workspace_exists(dir_path: String) -> AppResult<bool> {
     if dir_path.is_empty() {
@@ -44,6 +46,7 @@ pub async fn workspace_exists(dir_path: String) -> AppResult<bool> {
     Ok(r)
 }
 
+/// `create_file` 的入参：父目录与新文件名。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFileArgs {
@@ -51,6 +54,7 @@ pub struct CreateFileArgs {
     pub file_name: String,
 }
 
+/// 在指定目录创建空文件，成功返回新文件路径，失败时记录告警并返回 `None`。
 #[tauri::command]
 pub async fn create_file(args: CreateFileArgs) -> AppResult<Option<String>> {
     let CreateFileArgs { dir_path, file_name } = args;
@@ -70,6 +74,7 @@ pub async fn create_file(args: CreateFileArgs) -> AppResult<Option<String>> {
     }
 }
 
+/// `create_folder` 的入参：父目录与新文件夹名。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateFolderArgs {
@@ -77,6 +82,7 @@ pub struct CreateFolderArgs {
     pub folder_name: String,
 }
 
+/// 在指定目录创建文件夹（含中间层级），成功返回路径，失败时记录告警并返回 `None`。
 #[tauri::command]
 pub async fn create_folder(args: CreateFolderArgs) -> AppResult<Option<String>> {
     let CreateFolderArgs {
@@ -99,6 +105,7 @@ pub async fn create_folder(args: CreateFolderArgs) -> AppResult<Option<String>> 
     }
 }
 
+/// 删除文件或目录（目录递归删除）。成功返回 `true`，失败时记录告警并返回 `false`。
 #[tauri::command]
 pub async fn delete_file(file_path: String) -> AppResult<bool> {
     let r: Result<(), std::io::Error> = tokio::task::spawn_blocking(move || {
@@ -120,6 +127,7 @@ pub async fn delete_file(file_path: String) -> AppResult<bool> {
     }
 }
 
+/// `rename_file` 的入参：原路径与新名称（仅改名，保持在同一父目录）。
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenameFileArgs {
@@ -127,6 +135,7 @@ pub struct RenameFileArgs {
     pub new_name: String,
 }
 
+/// 在原父目录下将文件/目录重命名为新名称，成功返回新路径，失败时记录告警并返回 `None`。
 #[tauri::command]
 pub async fn rename_file(args: RenameFileArgs) -> AppResult<Option<String>> {
     let RenameFileArgs { old_path, new_name } = args;
@@ -150,17 +159,20 @@ pub async fn rename_file(args: RenameFileArgs) -> AppResult<Option<String>> {
     }
 }
 
+/// 开始监听工作区目录，目录内容变化时向前端 emit `workspace:directory-changed`。
 #[tauri::command]
 pub async fn watch_directory(app: AppHandle, dir_path: String) -> AppResult<()> {
     start_directory_watch(app, PathBuf::from(dir_path)).await
 }
 
+/// 停止当前的工作区目录监听。
 #[tauri::command]
 pub async fn unwatch_directory() -> AppResult<()> {
     stop_directory_watch().await;
     Ok(())
 }
 
+/// 同步需要单独监听的文件集合，文件内容变化时向前端 emit `file:changed`。
 #[tauri::command]
 pub async fn watch_files(app: AppHandle, file_paths: Vec<String>) -> AppResult<()> {
     let paths = file_paths.into_iter().map(PathBuf::from).collect();
